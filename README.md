@@ -8,6 +8,9 @@ New to sources? Read the [format guide](https://github.com/kunkka19xx/look/blob/
 
 > **Needs Look v0.6.12 or newer.** Earlier builds do not read `~/.look/sources/`, so nothing here will appear. 0.6.12 is not released yet: [build from source](https://github.com/kunkka19xx/look/blob/main/DEVELOPMENT.md) to try these today.
 
+**_Tmux source in action_**  
+![tmux](./examples/tmux/open-in-tmux.gif)
+
 ## Install any example
 
 ```bash
