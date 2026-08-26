@@ -4,6 +4,8 @@ One session per project, opened in the terminal you are **already** in. Select a
 
 Separately, `tmux-sessions` lists the sessions you already have, wherever you are, with window counts and whether each is live somewhere else.
 
+![tmux](./open-in-tmux.gif) 
+
 **Requires.** Look v0.6.12 or newer, `tmux`, and a terminal emulator.
 
 **Platforms.** macOS. The session logic is portable, but raising the terminal uses `open -a`, so Linux and Windows need a few lines changed in `bin/tmux-open`, see Customise.
