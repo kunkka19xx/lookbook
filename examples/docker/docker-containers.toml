@@ -1,0 +1,34 @@
+# Every container, running or not, with a status glyph per row.
+#
+# `format = "json"` is the opt-in for the two fields tab-separated lines cannot
+# carry: `path`, which would make a row a real file, and `icon`, which is what
+# this example wants. The block's own icon is right when its rows are alike;
+# these are not.
+#
+# The rows come from a script rather than a one-liner because it takes a jq
+# filter to shape them. See bin/docker-rows.
+
+[docker-containers]
+name    = "Containers"
+icon    = "🐳"
+run     = "~/.look/bin/docker-rows"
+format  = "json"
+timeout = "10s"
+
+aliases = ["docker", "ctr"]
+
+preview = "docker logs --tail 40 {id}"
+open    = "open -na Ghostty --args -e docker exec -it {id} sh"
+then    = ["docker-containers-stop", "docker-containers-restart"]
+
+
+[docker-containers-stop]
+name    = "Stop container"
+confirm = "Stop {title}?"
+do      = ["docker stop {id}"]
+
+
+[docker-containers-restart]
+name    = "Restart container"
+confirm = "Restart {title}?"
+do      = ["docker restart {id}"]

@@ -1,0 +1,28 @@
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  examples:
+    name: examples parse
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Look's own parser is the only correct judge of this format, so CI
+      # borrows it rather than reimplementing the rules here.
+      - uses: actions/checkout@v4
+        with:
+          repository: kunkka19xx/look
+          path: .look-src
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: .look-src/core
+
+      - run: make check

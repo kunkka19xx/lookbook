@@ -1,0 +1,18 @@
+# Every project in ~/dev, as rows you can type for.
+#
+# A `dir` block's rows stay real folders, so preview, reveal, and copy all keep
+# working on them. That is also why there is no `open` here: with none declared,
+# Enter opens the folder the way Look opens any folder.
+
+[dev-projects]
+name    = "Projects"
+icon    = "📁"
+dir     = "~/dev"                  # or: dirs = ["~/dev", "~/work"]
+depth   = 1                        # 1 = immediate children
+only    = "dirs"
+exclude = ["archive*", "node_modules"]
+
+aliases = ["repo", "proj", "code"]
+
+# Cmd+E on a project. Declare only what differs from your global editor.
+edit = "code {path}"

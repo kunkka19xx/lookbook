@@ -1,0 +1,28 @@
+# Branches of the project you have selected, newest first.
+#
+# This is a DRILL-DOWN: it is reached from a project row with Cmd+K, never
+# typed for directly. Look knows that on its own, because the producer names
+# {path} and so only means something against a selected row.
+#
+# Note which placeholder each line uses. `run` is asked for rows while the
+# PROJECT is still the selected row, so it says {path}. Everything below it acts
+# on a BRANCH row that `run` produced, whose parent is the project, so those say
+# {parent.path}.
+#
+# %09 is a tab, which makes each line: id <TAB> title <TAB> subtitle
+
+[git-branches]
+name    = "Branches"
+icon    = "🌿"
+run     = "git -C {path} for-each-ref --sort=-committerdate --format='%(refname:short)%09%(refname:short)%09%(committerdate:relative)' refs/heads"
+preview = "git -C {parent.path} log -15 --date=short --format='%h  %ad  %an  %s' {id}"
+open    = "git -C {parent.path} switch {id}"
+then    = ["git-branches-delete"]
+
+
+# Refuses to delete a branch that is not merged, which is `git branch -d` doing
+# its job. Change -d to -D only if you mean it.
+[git-branches-delete]
+name    = "Delete branch"
+confirm = "Delete branch {id} in {parent.title}?"
+do      = ["git -C {parent.path} branch -d {id}"]

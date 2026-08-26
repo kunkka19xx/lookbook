@@ -1,0 +1,15 @@
+# Every host in ~/.ssh/config, as rows.
+#
+# Reads the config you already keep, so there is no second list to maintain.
+# Wildcard patterns (Host *) are skipped: they are settings, not machines.
+#
+# `run` commands are re-run on reload, not on every keystroke, so this stays
+# instant no matter how long your config gets.
+
+[ssh-hosts]
+name = "SSH hosts"
+icon = "🖥️"
+run  = "awk '/^[Hh]ost / { for (i = 2; i <= NF; i++) if ($i !~ /[*?]/) print $i }' ~/.ssh/config"
+
+# Opens a terminal and connects. macOS + Ghostty as written; see the README.
+open = "open -na Ghostty --args -e ssh {id}"

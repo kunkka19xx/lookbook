@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Rows for Look's docker-containers source: one JSON object per line.
+#
+# JSON rather than tab-separated lines, for the one field lines cannot carry:
+# a per-row `icon`, so a running container looks different from a stopped one.
+set -euo pipefail
+
+docker ps --all --format '{{json .}}' | jq -c '{
+  id:       .Names,
+  title:    .Names,
+  subtitle: (.Status + "  ·  " + .Image),
+  icon:     (if (.Status | startswith("Up")) then "🟢" else "⚫️" end)
+}'

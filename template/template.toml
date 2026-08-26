@@ -1,0 +1,41 @@
+# Every key a block can carry. Delete what you do not need.
+#
+# Exactly ONE producer key decides what a block is:
+#
+#   do    one row; Enter performs its steps
+#   dir   rows from the children of a directory
+#   file  rows from the lines of a text file
+#   run   rows from a command's stdout
+#
+# The whole format: https://github.com/kunkka19xx/look/blob/main/docs/user-sources.md
+
+[template]
+# `name` is what the user types to find these rows.
+name = "Template"
+icon = "📦"                        # emoji, SF Symbol name, or an image path
+
+dir  = "~/Documents"               # the producer. Swap for do / file / run
+only = "dirs"                      # dirs | files | all
+
+# aliases = ["short", "other"]     # extra words that find these rows
+# bias    = -5                     # score offset: negative sits below apps
+
+# What the standard keys do to a picked row. Declare only what differs from the
+# user's global tools. Placeholders are escaped for you, so never quote them.
+open = "open {path}"
+edit = "nvim {path}"
+
+# Output shown in the right panel for the selected row.
+preview = "ls -la {path}"
+
+# Blocks a picked row can reach with Cmd+K. A target that performs steps is an
+# action; one that produces rows is a level to descend into.
+then = ["template-action"]
+
+
+# Reached through `then`. It names {path}, so it is never a top-level row: it
+# only means something against a selected one.
+[template-action]
+name    = "Do the thing"
+confirm = "Really do the thing to {title}?"   # required if it destroys anything
+do      = ["echo {path}"]

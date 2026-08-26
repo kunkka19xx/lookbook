@@ -1,0 +1,14 @@
+# One row that opens everything you start the day with.
+#
+# A `do` block names no row, so it is a row of its own: type "work setup" and
+# press Enter. A step that fails does not stop the rest, so this still opens the
+# three apps you have installed out of four.
+
+[work-setup]
+name = "Work setup"
+icon = "🚀"
+do = [
+  "open -a Slack",
+  "open -a Ghostty",
+  "open -a Safari https://github.com/pulls",
+]
