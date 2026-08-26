@@ -129,9 +129,12 @@ Add a section beyond that only when something is genuinely confusing. The `git` 
 ## Check it before you open a PR
 
 ```bash
-make check
+make check                # everything
+make check NAME=tmux      # just the one you are working on
 ```
 
-It borrows Look's own parser, so it catches exactly what Look would: unknown keys, a block with no producer, a dangling `then`, a duplicate id, a bad glob. It also checks the paperwork: a README with a Platforms line, an entry in the root index, executable `bin/` scripts. The same script runs in CI.
+It borrows Look's own parser, so it catches exactly what Look would: unknown keys, a block with no producer, a dangling `then`, a duplicate id, a bad glob. Then it reads the checklist above back to you: a hard-coded home directory, a placeholder you quoted, a `curl` into a shell, a missing **Requires** or **Platforms** line, a block your README never mentions, an install line naming somebody else's folder, the `TODO` row `make new` left in the index, a committed GIF. The same script runs in CI.
+
+Two boxes it cannot tick, and they are the two that catch the most: **that you installed it and used it**, and **that a command only one OS understands is labelled as such**. Neither is decidable from the text, so both stay yours.
 
 It is the floor, not the bar. It reads your file; it never runs your commands. The [walkthrough above](#test-it-in-look-before-you-commit) is the part that catches a source that parses beautifully and does nothing.

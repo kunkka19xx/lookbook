@@ -12,7 +12,8 @@ help:
 	@echo "lookbook"
 	@echo
 	@echo "  make new NAME=tmux       scaffold examples/tmux from the template"
-	@echo "  make check               parse every example with Look's own parser"
+	@echo "  make check               check every example against CONTRIBUTING"
+	@echo "  make check NAME=tmux     check just that one"
 	@echo "  make install NAME=git    copy an example into $(SOURCES_DIR)"
 	@echo "  make install             copy every example there"
 	@echo "  make uninstall NAME=git  remove it again"
@@ -24,9 +25,9 @@ help:
 new:
 	@./scripts/new.sh "$(NAME)"
 
-# Parses. Never runs your commands, so install it and use it before committing.
+# Reads. Never runs your commands, so install it and use it before committing.
 check:
-	@./scripts/check.sh
+	@./scripts/check.sh $(NAME)
 
 install:
 	@mkdir -p "$(SOURCES_DIR)"
@@ -45,7 +46,7 @@ else
 		echo "installed examples/$(NAME) into $(SOURCES_DIR)"; \
 	fi
 endif
-	@echo "reload Look to pick it up"
+	@echo "reload Look to pick it up, and open the .toml first: its paths and apps are the author's"
 
 uninstall:
 	@test -n "$(NAME)" || { echo "usage: make uninstall NAME=git"; exit 1; }
