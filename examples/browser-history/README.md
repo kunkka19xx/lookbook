@@ -4,6 +4,9 @@ Your browser history as rows in Look, most recent first, each with the site's ow
 
 Firefox and the Chromium browsers are read together and de-duplicated by URL, so a page you opened in both is one row.
 
+<img width="1139" height="816" alt="image" src="https://github.com/user-attachments/assets/f63f9f61-0b83-4548-96e4-cc62a47156ed" />
+
+
 **Requires.** Look v0.6.12 or newer, and the `sqlite3` command on your `PATH`. At least one of Firefox, Brave, Chrome, Chromium, Edge or Vivaldi.
 
 The binary is always `sqlite3`; the package often is not. macOS ships it at `/usr/bin/sqlite3` and needs nothing installed. Debian and Ubuntu call the package `sqlite3`; Arch, Fedora and nixpkgs call it `sqlite`. A language binding is not a substitute: this uses `readfile()` and `writefile()`, which exist only in the command-line shell and not in the library every binding wraps.
