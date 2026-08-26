@@ -23,8 +23,7 @@ examples/git/
 ├── README.md            # required
 ├── git-branches.toml    # one file, or several
 ├── git-worktrees.toml
-├── bin/                 # optional helper scripts
-└── media/               # optional screenshot or GIF
+└── bin/                 # optional helper scripts
 ```
 
 Several files in one folder is the normal case for a tool with more than one useful source. They are independent: a user can copy one, the other, or both.
@@ -58,6 +57,7 @@ This is not style, it is the only thing keeping installed examples apart. Everyt
 - [ ] Commands that only work on one OS are labelled. `open -a` is macOS, `xdg-open` is Linux, `start` is Windows.
 - [ ] **You installed it and used it**, not just parsed it. See below.
 - [ ] A `bin/` script is executable, has a shebang, and the README says where to put it.
+- [ ] A demo GIF or screenshot is **linked**, not committed. [See below](#link-a-gif-do-not-commit-it).
 - [ ] No metadata table in the `.toml`. Every top-level table is a block, so a `[_meta]` fails to parse. Put context in the README or in `#` comments.
 
 ## Say which platforms it works on
@@ -77,6 +77,18 @@ Say it plainly when support is partial, which is the normal case:
 ```
 
 This matters more here than in most repos, because the commands are the example. `open -a Ghostty`, `xdg-open`, and `start ""` are three different things, and a launcher command that silently does nothing is hard to debug from the outside. If you cannot test an OS, say so and let someone who has one send the variant.
+
+## Link a GIF, do not commit it
+
+A GIF of your example in use is welcome. Put it somewhere else and link it:
+
+```markdown
+![tmux](https://user-images.githubusercontent.com/.../open-in-tmux.gif)
+```
+
+The easy way to get such a URL is to drag the file into a GitHub issue, pull request, or release. GitHub uploads it and hands back a permanent link, and no `media/` folder is needed.
+
+Committing it instead is a decision nobody can undo. Git keeps every version of a binary forever and cannot delta-compress one, so a 5 MB recording is 5 MB in every clone of this repo from now on, and re-recording it twice makes that 15 MB. What is being shared here is a handful of small text files people copy; a demo of them should not outweigh them.
 
 ## Test it in Look before you commit
 

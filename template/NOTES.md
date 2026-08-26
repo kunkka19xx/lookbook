@@ -28,3 +28,5 @@ A folder is a topic, not a single source. `git/` holds `git-branches.toml` and `
 ## Before you commit
 
 `make check` proves the file parses. It never runs your commands. `make install NAME=my-thing`, reload, and actually use it: see [CONTRIBUTING](../CONTRIBUTING.md#test-it-in-look-before-you-commit).
+
+Adding a GIF of it in use? Link it from somewhere else rather than committing the file: see [CONTRIBUTING](../CONTRIBUTING.md#link-a-gif-do-not-commit-it).
