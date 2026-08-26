@@ -22,7 +22,10 @@ readonly LOOK_REPO="https://github.com/kunkka19xx/look"
 readonly LOOK_CHECKOUT="${LOOK_CHECKOUT:-.look-src}"
 readonly EXAMPLES_DIR="examples"
 readonly INDEX="README.md"
-readonly WORK_DIR="$(mktemp -d)"
+# Assigned before it is made readonly, so a failing mktemp is caught by `set -e`
+# rather than masked by readonly's own exit status.
+WORK_DIR="$(mktemp -d)"
+readonly WORK_DIR
 trap 'rm -rf "$WORK_DIR"' EXIT
 
 # Nothing in here is a binary, so anything larger than this is a mistake: what

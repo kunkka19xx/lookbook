@@ -1,0 +1,269 @@
+#!/usr/bin/env bash
+# Browser history as Look rows: one JSON object per line, most recent first.
+# Declared by ~/.look/sources/browser-history.toml.
+#
+# Firefox and the Chromium browsers, every profile of each, merged and
+# de-duplicated by URL. Look runs this on reload (Cmd/Ctrl+Shift+;), never per
+# keystroke, so the cost is paid once and typing filters the snapshot.
+set -u
+
+
+# --------------------------------------------------------------- settings --
+# Each one can also be set as an environment variable, so you can try a change
+# without editing the file.
+#
+# Look runs this through a LOGIN shell, which does not read ~/.zshrc or
+# ~/.bashrc, so exporting one there will not reach it. The reliable place is the
+# `run` line in browser-history.toml, where it is also visible next to what it
+# affects:
+#
+#   run = "LOOK_HISTORY_BROWSERS=firefox ~/.look/bin/browser-history-rows"
+
+# Which browsers to read. "auto" is every browser named below whose profile
+# directory exists. Otherwise a list: "firefox", "brave", "firefox,chrome".
+BROWSERS=${LOOK_HISTORY_BROWSERS:-auto}
+
+# Rows are also bounded by MAX_BYTES below, which is what usually binds; this is
+# the ceiling on what the query builds.
+LIMIT=${LOOK_HISTORY_LIMIT:-900}
+ICON_DIR=${LOOK_HISTORY_ICONS:-$HOME/.look/cache/favicons}
+# Look drops stdout past 256KB. Whole lines only, well under it, so a cut can
+# never land mid-object and cost the whole batch.
+MAX_BYTES=${LOOK_HISTORY_BYTES:-240000}
+MAX_URL=300
+
+# SQLite is built with MAX_ATTACHED=10, and every profile found is one ATTACH.
+# Past the limit the statement does not degrade, it fails, and a failed run
+# prints nothing and keeps the previous rows: history that silently stopped
+# updating. Refusing the eleventh and saying so on stderr is the lesser evil.
+MAX_DB=${LOOK_HISTORY_MAX_DB:-10}
+
+
+# ---------------------------------------------------------------- browsers --
+# Two engines, and which one a browser uses is all that differs downstream:
+# `mozilla` profiles keep places.sqlite and favicons.sqlite, `chromium` ones
+# keep History and Favicons, with different schemas and different epochs.
+engine_of() {
+    case "$1" in
+        firefox)                          echo mozilla ;;
+        brave | chrome | chromium | edge | vivaldi) echo chromium ;;
+        *)                                echo "" ;;
+    esac
+}
+
+# Every place a browser keeps profiles on Linux: the ordinary one, Snap's and
+# Flatpak's. macOS and Windows put them elsewhere; see the README.
+bases_of() {
+    case "$1" in
+        firefox)
+            printf '%s\n' \
+                "$HOME/.mozilla/firefox" \
+                "$HOME/snap/firefox/common/.mozilla/firefox" \
+                "$HOME/.var/app/org.mozilla.firefox/.mozilla/firefox" ;;
+        brave)
+            printf '%s\n' \
+                "$HOME/.config/BraveSoftware/Brave-Browser" \
+                "$HOME/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser" ;;
+        chrome)
+            printf '%s\n' \
+                "$HOME/.config/google-chrome" \
+                "$HOME/.var/app/com.google.Chrome/config/google-chrome" ;;
+        chromium)
+            printf '%s\n' \
+                "$HOME/.config/chromium" \
+                "$HOME/snap/chromium/common/chromium" \
+                "$HOME/.var/app/org.chromium.Chromium/config/chromium" ;;
+        edge)
+            printf '%s\n' "$HOME/.config/microsoft-edge" ;;
+        vivaldi)
+            printf '%s\n' "$HOME/.config/vivaldi" ;;
+    esac
+}
+
+KNOWN="firefox brave chrome chromium edge vivaldi"
+
+if [ "$BROWSERS" = auto ]; then
+    selected="$KNOWN"
+else
+    # Commas or spaces, so both "firefox,brave" and "firefox brave" work.
+    selected="$(printf '%s' "$BROWSERS" | tr ',' ' ')"
+    for name in $selected; do
+        [ -n "$(engine_of "$name")" ] ||
+            echo "LOOK_HISTORY_BROWSERS: no browser called \"$name\" (known: $KNOWN)" >&2
+    done
+fi
+
+
+# Non-zero, unlike the failures below: a missing interpreter is not transient,
+# and Look shows the first stderr line on the reload banner. Exiting 0 here
+# would keep the last run's rows and say nothing, which reads as the block being
+# broken rather than a program not being installed.
+command -v sqlite3 >/dev/null 2>&1 || {
+    echo "sqlite3 is not installed" >&2
+    exit 1
+}
+
+tmp=$(mktemp -d) || exit 0
+trap 'rm -rf "$tmp"' EXIT INT TERM
+
+n=0
+attach=""
+union=""
+capped=0
+
+# The host a favicon is filed under. The writer and the reader of that filename
+# have to agree exactly, so both interpolate this one expression: if they ever
+# disagreed, icons would be written under one key and looked up under another
+# and every one of them would silently vanish.
+HOST_SQL="replace(substr(rest, 1, CASE WHEN instr(rest, '/') > 0 THEN instr(rest, '/') - 1 ELSE length(rest) END), ':', '_')"
+
+# A live browser holds a write lock and checkpoints lazily, so each database is
+# read from a copy taken WITH its -wal: no lock is taken, and this session's
+# pages are not missing. No -shm - SQLite rebuilds it from the WAL.
+snapshot() {
+    cp "$1" "$2" 2>/dev/null || return 1
+    [ -f "$1-wal" ] && cp "$1-wal" "$2-wal" 2>/dev/null
+    return 0
+}
+
+add() {
+    # $1 live database, $2 SELECT template with @ where the alias goes.
+    [ -f "$1" ] || return 0
+    if [ "$n" -ge "$MAX_DB" ]; then
+        capped=$((capped + 1))
+        return 0
+    fi
+    n=$((n + 1))
+    snapshot "$1" "$tmp/db$n" || return 0
+    attach="$attach ATTACH DATABASE '$tmp/db$n' AS d$n;"
+    [ -n "$union" ] && union="$union UNION ALL "
+    union="$union$(printf '%s' "$2" | sed "s/@/d$n/g")"
+}
+
+# Firefox: microseconds since the unix epoch.
+MOZILLA='SELECT url, title, last_visit_date / 1000000 AS t FROM @.moz_places'
+# Chromium: microseconds since 1601-01-01, which is 11644473600 seconds before
+# the unix epoch. Without the shift every Chromium row sorts above every Firefox
+# one and dates as the year 15000-odd.
+CHROMIUM='SELECT url, title, last_visit_time / 1000000 - 11644473600 AS t FROM @.urls'
+
+# A here-string, not a pipeline: a piped `while read` runs in a subshell and the
+# state `add` accumulates would be discarded with it.
+for browser in $selected; do
+    case "$(engine_of "$browser")" in
+        mozilla)
+            while IFS= read -r base; do
+                [ -n "$base" ] || continue
+                for db in "$base"/*/places.sqlite; do add "$db" "$MOZILLA"; done
+            done <<< "$(bases_of "$browser")" ;;
+        chromium)
+            while IFS= read -r base; do
+                [ -n "$base" ] || continue
+                # A Chromium profile directory is whichever one holds a History
+                # file. The rest of that folder is extensions and crash reports,
+                # and `add` skips anything that is not a file anyway.
+                for db in "$base"/*/History; do add "$db" "$CHROMIUM"; done
+            done <<< "$(bases_of "$browser")" ;;
+    esac
+done
+
+[ "$capped" -eq 0 ] ||
+    echo "more than $MAX_DB profile databases; $capped skipped (LOOK_HISTORY_BROWSERS narrows it)" >&2
+
+# --- favicons -----------------------------------------------------------
+# One PNG per host, largest bitmap wins. Each database is queried in its own
+# sqlite session: a profile that renamed a table costs its own icons and not
+# everyone else's. Only PNGs, checked by magic number, because that is what the
+# icon layer can decode - browsers also store SVG and ICO.
+icons() {
+    [ -f "$1" ] || return 0
+    icon_n=$((icon_n + 1))
+    snapshot "$1" "$tmp/icons$icon_n" || return 0
+    sqlite3 -batch -noheader "$tmp/icons$icon_n" "
+        SELECT writefile('$ICON_DIR/' || $HOST_SQL || '.png', data), max(w)
+        FROM ($2)
+        GROUP BY $HOST_SQL
+        HAVING $HOST_SQL <> '';
+    " >/dev/null 2>&1
+}
+icon_n=0
+
+mkdir -p "$ICON_DIR" 2>/dev/null
+
+# Both shapes end in the same three columns - rest, data, w - because icons()
+# wraps whichever it is given in one GROUP BY that knows only those names.
+MOZILLA_ICONS="SELECT substr(p.page_url, instr(p.page_url, '://') + 3) AS rest, i.data AS data, i.width AS w
+    FROM moz_pages_w_icons p
+    JOIN moz_icons_to_pages r ON r.page_id = p.id
+    JOIN moz_icons i ON i.id = r.icon_id
+    WHERE hex(substr(i.data, 1, 4)) = '89504E47'"
+CHROMIUM_ICONS="SELECT substr(m.page_url, instr(m.page_url, '://') + 3) AS rest, b.image_data AS data, b.width AS w
+    FROM icon_mapping m
+    JOIN favicon_bitmaps b ON b.icon_id = m.icon_id
+    WHERE hex(substr(b.image_data, 1, 4)) = '89504E47'"
+
+for browser in $selected; do
+    case "$(engine_of "$browser")" in
+        mozilla)
+            while IFS= read -r base; do
+                [ -n "$base" ] || continue
+                for db in "$base"/*/favicons.sqlite; do icons "$db" "$MOZILLA_ICONS"; done
+            done <<< "$(bases_of "$browser")" ;;
+        chromium)
+            while IFS= read -r base; do
+                [ -n "$base" ] || continue
+                for db in "$base"/*/Favicons; do icons "$db" "$CHROMIUM_ICONS"; done
+            done <<< "$(bases_of "$browser")" ;;
+    esac
+done
+
+# Nothing readable. Printing nothing keeps the rows from the last good run,
+# which is the whole point of saying nothing rather than saying "0 rows".
+[ "$n" -eq 0 ] && exit 0
+
+sqlite3 -batch -noheader :memory: "
+$attach
+WITH raw(url, title, t) AS ($union),
+-- A trailing slash is the same page, so the two spellings collapse to one row.
+-- A fragment is NOT stripped: hash-routed sites give real pages after the '#'.
+norm AS (
+    SELECT
+        rtrim(url, '/') AS url,
+        substr(rtrim(url, '/'), instr(url, '://') + 3) AS rest,
+        nullif(trim(title), '') AS title,
+        t
+    FROM raw
+    WHERE url LIKE 'http%' AND length(url) <= $MAX_URL AND t > 0
+),
+-- Grouped on the scheme-less URL, so one page reached over http and later over
+-- https is one row, and a page open in two browsers is one row rather than two.
+-- max(url) keeps the https spelling ('s' sorts above ':'). max() over titles
+-- skips NULLs, so a page one profile recorded untitled keeps the title another
+-- profile has for it.
+kept AS (
+    SELECT max(url) AS url, rest, max(title) AS title, max(t) AS t
+    FROM norm
+    GROUP BY rest
+    ORDER BY t DESC
+    LIMIT $LIMIT
+)
+-- Both lines carry host AND path: on a busy site the host alone made every page
+-- read identically, and untitled rows had nothing else to show.
+SELECT json_object(
+    'id', url,
+    'title', substr(coalesce(title, rest), 1, 110),
+    -- The middle is what a long one loses: the host says which site, the tail
+    -- says which page, so both ends have to survive.
+    'subtitle', CASE
+        WHEN length(rest) <= 72 THEN rest
+        ELSE substr(rest, 1, 40) || '…' || substr(rest, length(rest) - 28)
+    END || '  ·  ' || date(t, 'unixepoch', 'localtime'),
+    -- Only when the file is really there: an unresolvable icon path is drawn as
+    -- its own text. readfile() answers NULL for a miss, and so does the CASE,
+    -- which is read as no icon. Tested and returned as one value, so the check
+    -- and the answer cannot name different files.
+    'icon', CASE WHEN readfile(icon_path) IS NOT NULL THEN icon_path END
+)
+FROM (SELECT url, title, t, rest, '$ICON_DIR/' || $HOST_SQL || '.png' AS icon_path FROM kept)
+ORDER BY t DESC;
+" 2>/dev/null | LC_ALL=C awk -v cap="$MAX_BYTES" '{ total += length($0) + 1; if (total > cap) exit; print }'

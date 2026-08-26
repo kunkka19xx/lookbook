@@ -1,0 +1,32 @@
+# Your browser history, searchable in Look. Type "history" (or "web", "url").
+#
+# Firefox and the Chromium browsers (Brave, Chrome, Chromium, Edge, Vivaldi),
+# every profile of each, merged and de-duplicated by URL. The work is in
+# bin/browser-history-rows, because it takes a SQL query per browser and a
+# favicon pass, and both are worth being able to read and edit.
+#
+# Needs sqlite3 on PATH. Without it the script says so on stderr and the block
+# has no rows.
+
+[browser-history]
+name    = "Browser history"
+icon    = "🌐"
+format  = "json"
+timeout = "20s"
+aliases = ["history", "web", "url", "browser"]
+
+# Every browser whose profiles exist. Narrow it to one, and the history you can
+# reach goes back further: the row budget is shared across whatever is merged.
+#   run = "LOOK_HISTORY_BROWSERS=firefox ~/.look/bin/browser-history-rows"
+#
+# Set here rather than exported from your shell rc, because Look runs commands
+# through a LOGIN shell, which never reads ~/.zshrc or ~/.bashrc.
+run = "~/.look/bin/browser-history-rows"
+
+# The row id is the URL, so Enter hands it to your default browser.
+# macOS: "open {id}". Windows: "start \"\" {id}".
+open = "xdg-open {id}"
+
+# The full URL, which the row truncates: this is where you check what Enter
+# opens before you press it.
+preview = "printf '%s\\n' {id}"

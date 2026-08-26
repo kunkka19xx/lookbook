@@ -56,6 +56,7 @@ The **Platforms** column is what the author tested, not what might work. Where a
 | [git](examples/git)                   | git        | two files in one folder; drill-downs, `confirm`, `{parent.*}` | macOS, Linux, Windows |
 | [docker](examples/docker)             | docker, jq | `format = "json"`, per-row icons, a helper script             | macOS                 |
 | [tmux](examples/tmux)                 | tmux       | a `bin/` script doing real work; session per project          | macOS                 |
+| [browser-history](examples/browser-history) | sqlite3    | `run` + `format = "json"`: favicons as per-row icons, browsers picked by env var | Linux                 |
 
 ## Read before you install
 
