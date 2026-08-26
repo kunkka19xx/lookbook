@@ -1,0 +1,40 @@
+# A list of links you keep by hand, one per line.
+#
+# `file` is the producer for a list that changes when you change it and not
+# before: no command runs, the file is simply read. Reload picks up an edit, and
+# so does the normal index refresh.
+#
+# The whole format is one line per row, tab separated:
+#
+#   id <TAB> title <TAB> subtitle
+#
+# A line with no tabs is a row whose id and title are the same text. Blank lines
+# are skipped. There are NO comments: every non-blank line becomes a row, so a
+# line starting with # shows up as one.
+
+[bookmarks]
+name = "Bookmarks"
+icon = "🔖"
+
+file = "~/.look/bookmarks.txt"
+
+# The id is the URL, so Enter hands it to your default browser.
+# macOS: "open {id}". Windows: "start \"\" {id}".
+open = "xdg-open {id}"
+
+# A verb does not have to act on the row. There is nothing to edit about a
+# bookmark, so Cmd+E opens the list it came from instead, which is the thing you
+# actually want to change.
+edit = "ghostty -e nvim ~/.look/bookmarks.txt"
+
+then = ["bookmarks-edit"]
+
+
+# The same edit as a row of its own, which is worth having for a reason that is
+# not obvious: a `file` block's rows are titled after their contents, so nothing
+# here answers to the word "bookmarks". A `do` block's single row is titled after
+# the block, so this one does. Type "bookmarks" and you land on the list.
+[bookmarks-edit]
+name = "Edit bookmarks"
+icon = "🔖"
+do   = ["ghostty -e nvim ~/.look/bookmarks.txt"]

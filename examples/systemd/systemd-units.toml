@@ -1,0 +1,55 @@
+# Your user services, running or not, with their logs in the preview pane.
+#
+# `--user` throughout, deliberately. A user unit needs no privileges, and a
+# launcher cannot ask for any: steps get no stdin and no TTY, so `sudo` has
+# nowhere to prompt and simply hangs or fails. System units are one word away
+# and come with that caveat attached; see the README.
+#
+# Tab-separated lines rather than JSON, because nothing here needs a `path` or a
+# per-row icon: the state is more readable as words in the subtitle. See the
+# docker example for the JSON shape and per-row status glyphs.
+
+[systemd-units]
+name    = "Services"
+icon    = "⚙️"
+aliases = ["systemctl", "service", "unit", "daemon"]
+
+# id <TAB> title <TAB> subtitle. The id keeps `.service` because that is what
+# systemctl wants back; the title drops it because you are reading it.
+# A description equal to the unit name is what systemd prints when a unit has
+# none, so it is dropped rather than shown twice.
+run = '''systemctl --user list-units --type=service --all --no-legend --plain --no-pager |
+  awk '{
+    unit = $1; name = unit; gsub(/\.service$/, "", name)
+    desc = ""; for (i = 5; i <= NF; i++) desc = desc (i > 5 ? " " : "") $i
+    state = $3 " · " $4; if (desc != "" && desc != unit) state = state " · " desc
+    printf "%s\t%s\t%s\n", unit, name, state
+  }' '''
+
+# The last 40 lines, in the panel, for whichever row is selected.
+preview = "journalctl --user -u {id} -n 40 --no-pager"
+
+# Enter follows the log live. This names a terminal, so it is the line to change:
+# see the README for the other spellings.
+open = "ghostty -e journalctl --user -u {id} -f"
+
+then = ["systemd-units-restart", "systemd-units-stop", "systemd-units-start"]
+
+
+[systemd-units-restart]
+name    = "Restart service"
+confirm = "Restart {title}?"
+do      = ["systemctl --user restart {id}"]
+
+
+[systemd-units-stop]
+name    = "Stop service"
+confirm = "Stop {title}?"
+do      = ["systemctl --user stop {id}"]
+
+
+# No `confirm`: starting something that is not running breaks nothing, and a
+# question on every row is a question nobody reads by the third time.
+[systemd-units-start]
+name = "Start service"
+do   = ["systemctl --user start {id}"]

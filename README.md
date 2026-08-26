@@ -57,6 +57,9 @@ The **Platforms** column is what the author tested, not what might work. Where a
 | [docker](examples/docker)             | docker, jq | `format = "json"`, per-row icons, a helper script             | macOS                 |
 | [tmux](examples/tmux)                 | tmux       | a `bin/` script doing real work; session per project          | macOS                 |
 | [browser-history](examples/browser-history) | sqlite3    | `run` + `format = "json"`: favicons as per-row icons, browsers picked by env var | Linux                 |
+| [close-windows](examples/close-windows) | jq         | a multi-line `do` step; `confirm` on something irreversible          | Linux (sway; more untested) |
+| [systemd](examples/systemd)           | systemd    | tab-separated rows, `preview` from a log, three guarded actions      | Linux                 |
+| [bookmarks](examples/bookmarks)       | none       | `file`: a list you keep by hand, and the no-TOML script trick        | Linux                 |
 
 ## Read before you install
 

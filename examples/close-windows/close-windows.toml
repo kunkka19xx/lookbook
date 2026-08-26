@@ -1,0 +1,84 @@
+# Close every window except Look, on a Wayland compositor.
+#
+# One row, and Enter asks before it does anything. What it sends is a close
+# REQUEST, the same thing the window's own close button sends, so an editor with
+# unsaved work still gets to stop and ask you about it. Nothing here sends a
+# signal to a process.
+#
+# niri and sway are the two it speaks. Each answers a JSON query for its window
+# list and takes one close command per window, so any compositor with an IPC
+# socket is a handful of lines away. The README shows where they go.
+
+[close-windows]
+name    = "Close all windows"
+icon    = "🌙"
+aliases = ["end work", "evening", "quit all", "close all"]
+
+# A launcher makes Enter on the wrong row very cheap, and this is the line that
+# makes it expensive again. Not optional here: some of the windows this closes
+# are holding work nobody has saved yet.
+confirm = "Close every window except Look?"
+
+do = ['''
+if [ -n "$NIRI_SOCKET" ]; then
+  niri msg -j windows |
+    jq -r '.[] | select((.app_id // "") != "lookapp") | .id' |
+    while read -r id; do
+      [ -n "$id" ] && niri msg action close-window --id "$id" >/dev/null 2>&1
+    done
+
+elif [ -n "$SWAYSOCK" ]; then
+  # `.pid` is what makes a node a window rather than a container or a workspace.
+  # An XWayland client has no `app_id` at all - Firefox reports
+  # `window_properties.class` instead - so keying on app_id alone silently
+  # spared every X11 window.
+  swaymsg -t get_tree |
+    jq -r '.. | objects | select(.pid != null)
+           | select((.app_id // .window_properties.class // "") != "lookapp")
+           | .id' |
+    while read -r id; do
+      [ -n "$id" ] && swaymsg "[con_id=$id] kill" >/dev/null 2>&1
+    done
+
+elif [ -n "$HYPRLAND_INSTANCE_SIGNATURE" ]; then
+  # A flat array rather than a tree, and windows are addressed by `address`.
+  # `mapped` drops the ones that exist but are not on screen.
+  hyprctl -j clients |
+    jq -r '.[] | select(.mapped) | select((.class // "") != "lookapp") | .address' |
+    while read -r address; do
+      [ -n "$address" ] && hyprctl dispatch closewindow "address:$address" >/dev/null 2>&1
+    done
+
+elif [ -n "$I3SOCK" ]; then
+  # i3 is X11, and its tree does NOT carry `.pid` the way sway's does: reusing
+  # the sway filter here matches nothing at all and closes nothing. `.window` is
+  # the X11 window id, which every real window has and no container does.
+  i3-msg -t get_tree |
+    jq -r '.. | objects | select(.window != null)
+           | select((.window_properties.class // "") != "lookapp")
+           | .id' |
+    while read -r id; do
+      [ -n "$id" ] && i3-msg "[con_id=$id] kill" >/dev/null 2>&1
+    done
+
+elif command -v wmctrl >/dev/null 2>&1; then
+  # Anything else on X11: GNOME on Xorg, KDE, XFCE. -x puts WM_CLASS in the
+  # third column, and -c sends WM_DELETE_WINDOW, which is the polite one.
+  wmctrl -l -x |
+    awk '$3 !~ /lookapp/ { print $1 }' |
+    while read -r id; do
+      [ -n "$id" ] && wmctrl -i -c "$id" >/dev/null 2>&1
+    done
+
+else
+  # Look shows the first stderr line on the reload banner, so this is the case
+  # worth being loud about: nothing happened, and the reason is knowable.
+  #
+  # GNOME on Wayland lands here and cannot be rescued by installing something.
+  # Mutter exposes no window-management IPC, and org.gnome.Shell.Eval has been
+  # locked behind unsafe-mode since GNOME 41. It needs a shell extension.
+  echo "no window IPC: not niri, sway, Hyprland or i3, and wmctrl is not installed" >&2
+  echo "GNOME on Wayland has no such interface at all; see the README" >&2
+  exit 1
+fi
+''']
