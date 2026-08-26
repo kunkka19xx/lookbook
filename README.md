@@ -24,13 +24,14 @@ Copy only the `.toml`. Look reads `~/.look/sources/` flat, so it never looks ins
 
 The **Platforms** column is what the author tested, not what might work. Where an example needs a change to run elsewhere, its README says which line.
 
-| Example | Tools | Shows off | Platforms |
-| --- | --- | --- | --- |
-| [work-setup](examples/work-setup) | none | `do`: one row, several apps | macOS |
-| [dev-projects](examples/dev-projects) | none | `dir`: rows from a directory, custom verbs | macOS, Linux, Windows |
-| [ssh](examples/ssh) | ssh | `run`: rows from a command, and the `file` alternative | macOS |
-| [git](examples/git) | git | two files in one folder; drill-downs, `confirm`, `{parent.*}` | macOS, Linux, Windows |
-| [docker](examples/docker) | docker, jq | `format = "json"`, per-row icons, a helper script | macOS |
+| Example                               | Tools      | Shows off                                                     | Platforms             |
+| ------------------------------------- | ---------- | ------------------------------------------------------------- | --------------------- |
+| [work-setup](examples/work-setup)     | none       | `do`: one row, several apps                                   | macOS                 |
+| [dev-projects](examples/dev-projects) | none       | `dir`: rows from a directory, custom verbs                    | macOS, Linux, Windows |
+| [ssh](examples/ssh)                   | ssh        | `run`: rows from a command, and the `file` alternative        | macOS                 |
+| [git](examples/git)                   | git        | two files in one folder; drill-downs, `confirm`, `{parent.*}` | macOS, Linux, Windows |
+| [docker](examples/docker)             | docker, jq | `format = "json"`, per-row icons, a helper script             | macOS                 |
+| [tmux](examples/tmux)                 | tmux       | a `bin/` script doing real work; session per project          | macOS                 |
 
 ## Read before you install
 

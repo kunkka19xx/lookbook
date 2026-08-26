@@ -1,0 +1,26 @@
+# The tmux sessions you already have, from anywhere.
+#
+# A second file in this folder, independent of tmux-open.toml: copy one, the
+# other, or both.
+
+[tmux-sessions]
+name    = "tmux sessions"
+icon    = "🧵"
+aliases = ["tm"]
+
+# `path` is what makes each row a real directory, so Cmd+E, Cmd+F and {path}
+# act on the session's working directory. Lines cannot carry it; JSON can.
+format  = "json"
+run     = """tmux list-sessions -F '{"id":"#{session_name}","title":"#{session_name}","subtitle":"#{session_windows} windows, #{?session_attached,attached,detached}","path":"#{session_path}"}'"""
+
+# `\={id}`, with the backslash and without quotes of its own:
+#   "={id}"  -> tmux gets the literal ='look', because placeholders arrive
+#               already shell-quoted and a template never quotes them again
+#   ={id}    -> zsh's equals-expansion turns =look into /usr/bin/look
+#   \={id}   -> tmux gets =look, which asks it for that exact session name
+open    = "wezterm start -- tmux attach -t \\={id}"
+
+# Index, an active marker, and the name. Not the current command as well: tmux
+# renames a window after whatever runs in it, so the two columns said the same
+# thing twice.
+preview = "tmux list-windows -t \\={id} -F '#{window_index}#{?window_active,*, }  #{window_name}'"

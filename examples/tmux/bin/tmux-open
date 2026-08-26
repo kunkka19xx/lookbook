@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+#
+# Open the tmux session for a project, in the terminal you are already using.
+#
+#   tmux-open <directory>
+#
+# Creates the session if it does not exist. If a terminal is already attached to
+# tmux, that one is switched to the session instead of a second window being
+# opened. Only when nothing is attached anywhere is a terminal spawned.
+#
+# EVERYTHING YOU MIGHT WANT TO CHANGE IS IN THE TWO SECTIONS BELOW.
+# The logic under them rarely needs touching.
+
+set -euo pipefail
+
+
+# --------------------------------------------------------------- settings --
+# Each one can also be set as an environment variable, so you can try a change
+# without editing the file:
+#
+#   LOOK_TMUX_TERMINAL=kitty tmux-open ~/dev/look
+
+# The terminal to open when no terminal is attached to tmux yet.
+# Used by spawn_terminal() below, which is where the flags live.
+TERMINAL="${LOOK_TMUX_TERMINAL:-ghostty}"
+
+# After switching an attached client, bring its terminal to the front.
+# Set to 0 if you use a tiling window manager that does this for you.
+RAISE_TERMINAL="${LOOK_TMUX_RAISE:-1}"
+
+# Always open a new terminal window, never reuse an attached one.
+# Set to 1 if you would rather have a window per project.
+ALWAYS_NEW_WINDOW="${LOOK_TMUX_ALWAYS_NEW:-0}"
+
+# Characters that cannot appear in a session name, replaced with "_".
+# tmux reads . and : as target separators, so a session named after a directory
+# like `present.nvim` could be created and then never addressed again.
+UNSAFE_CHARS="${LOOK_TMUX_UNSAFE_CHARS:-.:}"
+
+
+# ---------------------------------------------------------------- recipes --
+# Two small functions, kept together because they are the parts that differ
+# from setup to setup. Uncomment the line that matches your terminal.
+
+# Open a terminal attached to $1. Runs only when nothing is attached anywhere.
+spawn_terminal() {
+    local session="$1"
+
+    "$TERMINAL" -e tmux attach -t "=$session"       # ghostty, kitty, alacritty
+    # wezterm start -- tmux attach -t "=$session"   # wezterm
+    # gnome-terminal -- tmux attach -t "=$session"  # gnome-terminal
+    # $TERMINAL start tmux attach -t "=$session"    # Windows Terminal (wt)
+    #
+    # macOS Terminal.app takes no command argument, so it needs osascript or a
+    # one-line wrapper script. Any other terminal here is less work.
+}
+
+# Bring the terminal already showing tmux to the front. $1 is tmux's
+# termname for it, e.g. "xterm-ghostty". Add a line for your own terminal.
+raise_terminal() {
+    case "$1" in
+        *ghostty*)   open -a Ghostty ;;
+        *wezterm*)   open -a WezTerm ;;
+        *kitty*)     open -a kitty ;;
+        *alacritty*) open -a Alacritty ;;
+        # *foot*)    ...  # Linux: try wmctrl -a, or your WM's focus command
+        *)           : ;;   # unknown terminal: leave it where it is
+    esac
+}
+
+
+# ------------------------------------------------------------------ logic --
+
+usage() {
+    local code="${1:-1}"
+    # Asked for: stdout. Got it wrong: stderr.
+    if [ "$code" = "0" ]; then
+        echo "usage: tmux-open <directory>"
+    else
+        echo "usage: tmux-open <directory>" >&2
+    fi
+    exit "$code"
+}
+
+main() {
+    local dir="${1:-}"
+
+    case "$dir" in
+        -h | --help) usage 0 ;;
+        "") usage 1 ;;
+    esac
+    [ -d "$dir" ] || { echo "not a directory: $dir" >&2; exit 1; }
+
+    local session
+    session="$(basename "$dir")"
+    [ -z "$UNSAFE_CHARS" ] || session="$(printf '%s' "$session" | tr "$UNSAFE_CHARS" '_')"
+
+    # `=name` is tmux's exact-match target. Without it, `look` also matches
+    # `lookbook` and you are sent to the wrong session.
+    tmux has-session -t "=$session" 2>/dev/null ||
+        tmux new-session -d -s "$session" -c "$dir"
+
+    # An attached client means a terminal is already showing tmux. `|| true`
+    # because tmux exits non-zero when no server is running, which is not an
+    # error here: it is the case this script exists to handle.
+    local client=""
+    if [ "$ALWAYS_NEW_WINDOW" != "1" ]; then
+        client="$(tmux list-clients -F '#{client_tty} #{client_termname}' 2>/dev/null | head -n 1 || true)"
+    fi
+
+    if [ -z "$client" ]; then
+        spawn_terminal "$session"
+        return
+    fi
+
+    # "<tty> <termname>", so the tty is everything before the space and the
+    # termname everything after it.
+    tmux switch-client -c "${client%% *}" -t "=$session"
+
+    # Switching the client changes what that terminal shows. It does not raise
+    # the terminal, which is usually behind the launcher you just used.
+    if [ "$RAISE_TERMINAL" = "1" ]; then
+        raise_terminal "${client#* }"
+    fi
+}
+
+main "$@"

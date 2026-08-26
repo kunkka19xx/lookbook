@@ -1,0 +1,27 @@
+# One tmux session per project, opened in the terminal you are ALREADY in.
+#
+# The work is in bin/tmux-open, not here: switching an attached client, choosing
+# a terminal, and raising it are the parts that differ from setup to setup, and
+# they are worth being able to read and edit as a normal shell script.
+#
+# This block names {path}, so it is never a row you can type for: it only means
+# something against a selected project. Reach it with Cmd+K.
+
+[tmux-open]
+name = "Open in tmux"
+icon = "🧵"
+do   = ["~/.look/bin/tmux-open {path}"]
+
+
+# The same thing on Cmd+T, for your own block of project rows. `terminal` is one
+# of the four verbs every row has, so declaring it here refines that chord for
+# this block's rows only; everything else in Look still uses the terminal from
+# ~/.look/config.
+#
+# Add it to whichever block lists your projects:
+#
+#   [dev-projects]
+#   dir      = "~/dev"
+#   only     = "dirs"
+#   terminal = "~/.look/bin/tmux-open {path}"
+#   then     = ["tmux-open"]
