@@ -23,6 +23,13 @@ set -u
 # directory exists. Otherwise a list: "firefox", "brave", "firefox,chrome".
 BROWSERS=${LOOK_HISTORY_BROWSERS:-auto}
 
+# Only pages visited in the last N days. 0 is no limit, and is the default so
+# that nobody's existing install changes under them. Reach for this one first:
+# capping by age is what keeps a launcher from surfacing last spring in front of
+# whoever is standing behind you, and it bounds the merge below by time rather
+# than by whichever browser happens to be busiest.
+DAYS=${LOOK_HISTORY_DAYS:-0}
+
 # Rows are also bounded by MAX_BYTES below, which is what usually binds; this is
 # the ceiling on what the query builds.
 LIMIT=${LOOK_HISTORY_LIMIT:-900}
@@ -79,6 +86,12 @@ bases_of() {
             printf '%s\n' "$HOME/.config/vivaldi" ;;
     esac
 }
+
+case "$DAYS" in
+    '' | *[!0-9]*)
+        echo "LOOK_HISTORY_DAYS: \"$DAYS\" is not a whole number of days; ignoring" >&2
+        DAYS=0 ;;
+esac
 
 KNOWN="firefox brave chrome chromium edge vivaldi"
 
@@ -234,6 +247,10 @@ norm AS (
         t
     FROM raw
     WHERE url LIKE 'http%' AND length(url) <= $MAX_URL AND t > 0
+      -- CAST because strftime() answers TEXT, and SQLite sorts every INTEGER
+      -- below every TEXT rather than converting: without it the comparison is
+      -- false for every row and the window silently empties the list.
+      AND ($DAYS = 0 OR t > CAST(strftime('%s', 'now', '-$DAYS days') AS INTEGER))
 ),
 -- Grouped on the scheme-less URL, so one page reached over http and later over
 -- https is one row, and a page open in two browsers is one row rather than two.

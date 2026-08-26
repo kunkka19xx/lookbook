@@ -10,7 +10,11 @@ The binary is always `sqlite3`; the package often is not. macOS ships it at `/us
 
 **Platforms.** Linux. Tested against Firefox and Brave on Linux. macOS and Windows keep browser profiles in different places and need a different `open`; see Customise.
 
-**It reads your browsing history and makes it searchable in your launcher.** That is the point of it, but it is worth saying out loud: after installing, anyone typing in Look on your screen can see where you have been. It writes one favicon PNG per host into `~/.look/cache/favicons`, and sends nothing anywhere.
+**It reads your browsing history and makes it searchable in your launcher.** That is the point of it, and it sends nothing anywhere, but three things are worth saying out loud before you install it.
+
+- **`auto` means every browser and every profile.** Not only the browser you think of as yours: if work lives in one Chrome profile and everything else in Firefox, both land in one list. Name the one you want instead, on the `run` line. Private and incognito windows are never written to history in the first place, so those are already out.
+- **Anyone at your screen can read it.** A launcher is one keystroke away at all times, and three letters typed into it now surface where you have been. `LOOK_HISTORY_DAYS=30` is the first thing to set if that matters to you.
+- **The favicon cache outlives the source.** One PNG per host is written to `~/.look/cache/favicons`, each named after its host, so that directory is a readable list of the sites you visit. Removing the `.toml` does not remove it: `rm -rf ~/.look/cache/favicons`.
 
 ## Install
 
@@ -39,6 +43,7 @@ run = "LOOK_HISTORY_BROWSERS=firefox ~/.look/bin/browser-history-rows"
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `LOOK_HISTORY_BROWSERS` | `auto` | `auto` is every browser found. Or a list: `firefox`, `brave`, `firefox,chrome` |
+| `LOOK_HISTORY_DAYS` | `0` | Only pages seen in the last N days. `0` is no limit. The one to reach for first |
 | `LOOK_HISTORY_LIMIT` | `900` | Rows the query builds before the byte cap trims them |
 | `LOOK_HISTORY_BYTES` | `240000` | Output ceiling. Look drops stdout past 256KB, so there is little room above this |
 | `LOOK_HISTORY_ICONS` | `~/.look/cache/favicons` | Where the per-host PNGs are written |

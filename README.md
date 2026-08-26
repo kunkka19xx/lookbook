@@ -60,7 +60,9 @@ The **Platforms** column is what the author tested, not what might work. Where a
 
 ## Read before you install
 
-Every example runs shell commands on your machine when you press Enter. They are short and readable on purpose: **open the `.toml` and read it before you install it**, the same way you would read a shell script someone handed you. Nothing here downloads anything, pipes a URL into a shell, or touches a file you did not point it at, and anything destructive asks first.
+Every example runs shell commands on your machine when you press Enter. They are short and readable on purpose: **open the `.toml` and read it before you install it**, the same way you would read a shell script someone handed you. Nothing here downloads anything or pipes a URL into a shell, and anything destructive asks first.
+
+Most of them touch only what you point them at. One does not, on purpose: [browser-history](examples/browser-history) finds your browser profiles by itself and makes your history searchable in the launcher, which is the whole idea but also the one thing here worth reading about **before** installing rather than after. Its README opens with what that means and how to narrow it.
 
 ## Contributing
 
