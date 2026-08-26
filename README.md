@@ -11,6 +11,34 @@ New to sources? Read the [format guide](https://github.com/kunkka19xx/look/blob/
 **_Tmux source in action_**  
 ![tmux](./examples/tmux/open-in-tmux.gif)
 
+## How a source works
+
+One block, one producer key, rows in the launcher. That is the whole model:
+
+```mermaid
+flowchart TD
+    F["your-source.toml"] -->|reload| L["every .toml in ~/.look/sources/"]
+    L --> B1["do: the block is the row"]
+    L --> B2["dir: rows are real folders"]
+    L --> B3["file: rows are lines you keep"]
+    L --> B4["run: rows are what a command printed"]
+    B1 --> S["rows in Look, ranked by use"]
+    B2 -->|"carries a path"| S
+    B3 -->|"text only"| S
+    B4 -->|"text only"| S
+    S -->|Enter| A["open = ... runs, else the row's path,<br/>else the do steps"]
+    S -->|"Cmd / Ctrl + K"| T["then = [...]: drill down, or act on the row"]
+```
+
+Four things the picture leaves out:
+
+- **A file holds as many blocks as you like**, one producer each. `examples/docker` is one file with three: a `run` block listing containers, and two `do` blocks it reaches with `then`.
+- **A path row can do more than a text row.** `dir` rows are real filesystem objects, so `{path}`, `Cmd+E`, `Cmd+T` and `Cmd+F` work and Enter opens the folder with no `open` declared. `file` and `run` rows are text: give them an `open`, or `format = "json"` to carry a path and a per-row icon.
+- **Every step is shell text**, run through your login shell (`$SHELL -lc`, or `cmd /D /S /C` on Windows), so `&&`, `|`, `>`, `$VAR` and globs work. That is a *non-interactive* shell: it never reads `~/.zshrc`, so a `PATH` entry or alias living there is missing — move it to `~/.zshenv`, or name the binary in full. fish and nu are passed over for `/bin/sh`. A script can read `LOOK_ID`, `LOOK_TITLE` and `LOOK_PATH` instead of taking arguments.
+- **A producer that names a placeholder is not a top-level row.** `run = "git -C {path} branch"` means nothing with no project selected, so Look indexes it only as another block's `then` target.
+
+In a real file: `[dev-projects]` is the block, `dir = "~/dev"` is the producer that turns your folders into rows, and `edit = "code {path}"` is what one of those rows does on `Cmd+E`.
+
 ## Install any example
 
 ```bash
