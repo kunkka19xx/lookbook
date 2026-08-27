@@ -1,0 +1,49 @@
+# niri's screenshot UI is good and needs no help taking one: Print freezes the
+# screen, you drag a region, and it lands on the clipboard and in
+# `screenshot-path`. What niri gives you is the moment. What it gives you
+# afterwards is a folder.
+#
+# So this is the other half: the shot you took twenty minutes ago, back on the
+# clipboard, without opening a file manager to find it. Rows are real files, so
+# the image is drawn in the panel while you arrow through them.
+
+[niri-screenshots]
+name    = "Screenshots"
+icon    = "📸"
+aliases = ["screenshot", "shot", "grab", "capture"]
+
+# niri's default screenshot-path. If you changed that line in config.kdl,
+# change this one to match.
+dir   = "~/Pictures/Screenshots"
+only  = "files"
+match = ["*.png"]
+
+# Enter puts it back on the clipboard, because that is what you came for. niri
+# copies a screenshot at the moment you take it, and the next thing you copy
+# takes its place - after which the file is the only copy left.
+#
+# The type has to be declared: wl-copy does not sniff the file, and a PNG
+# offered as text/plain pastes as bytes.
+#
+# The redirect is belt and braces. Look already gives a step /dev/null for
+# every stream, so wl-copy's clipboard daemon has nothing of Look's to hold
+# open. It matters the moment you move this line into a `preview` or a `run`
+# block, which are captured and waited on - see the README.
+open = "wl-copy -t image/png < {path} >/dev/null 2>&1"
+
+then = ["niri-screenshots-view", "niri-screenshots-delete"]
+
+
+# `niri msg action spawn` for the same reason the wallpaper block uses it: the
+# compositor owns the process, rather than it being reparented to init.
+[niri-screenshots-view]
+name = "Open in viewer"
+icon = "🔍"
+do   = ["niri msg action spawn -- feh --scale-down --auto-zoom {path}"]
+
+
+[niri-screenshots-delete]
+name    = "Delete"
+icon    = "🗑️"
+confirm = "Delete {title}?"
+do      = ["rm {path}"]

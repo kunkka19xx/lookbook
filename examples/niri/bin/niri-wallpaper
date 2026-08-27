@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# Wallpapers for Look, and the command that sets one.
+#
+#   niri-wallpaper rows        one JSON object per image in the folder
+#   niri-wallpaper set FILE    hand it to the swww daemon
+#   niri-wallpaper random      hand it a random one
+#
+# A run block rather than a dir block, for one reason: Look captures a
+# producer's stderr and shows it at reload, and it throws a step's away. This is
+# the only place in the source that can tell you the tool is missing, so the
+# check lives here. A dir block would list the same images and then fail in
+# silence when you pressed Enter. See the README.
+#
+# The rows still carry `path`, so they are real files to Look: the image is
+# drawn in the panel exactly as it would be for a dir row.
+set -euo pipefail
+
+readonly DIR="${NIRI_WALLPAPERS:-$HOME/Pictures/Wallpapers}"
+
+# swww renamed its binaries to awww in 0.12 - the nixpkgs attribute is still
+# `swww` while the programs it installs are `awww` and `awww-daemon`. Both
+# spellings are in the wild, so neither is hard-coded.
+wallpaper_bin() { command -v swww || command -v awww || return 1; }
+
+case "${1:-rows}" in
+  rows)
+    if [ ! -d "$DIR" ]; then
+      echo "no wallpaper folder at $DIR (set NIRI_WALLPAPERS to yours)" >&2
+      exit 1
+    fi
+
+    # Not fatal: the folder is still worth listing, and saying this once at
+    # reload beats an Enter that does nothing and never says why.
+    wallpaper_bin >/dev/null 2>&1 ||
+      echo "swww is not installed (0.12+ calls it awww); rows will list but Enter will do nothing" >&2
+
+    find "$DIR" -maxdepth 1 -type f \
+      \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' \
+         -o -iname '*.webp' -o -iname '*.gif' \) |
+      sort |
+      jq -R -c '{ id: ., path: ., title: (split("/") | last | sub("\\.[^.]+$"; "")) }'
+    ;;
+
+  set)
+    file="${2:-}"
+    [ -n "$file" ] || { echo "set needs a file" >&2; exit 1; }
+
+    # Steps run with stderr on /dev/null, so nothing said here is ever seen.
+    # It is written anyway for the person running this by hand in a terminal,
+    # which is the only way to debug a step at all.
+    bin="$(wallpaper_bin)" || { echo "swww/awww is not installed" >&2; exit 1; }
+
+    # No pkill, no restart, no gap: the daemon is already holding the surface
+    # and simply swaps what it draws. That is the whole reason this example
+    # uses swww rather than swaybg, which takes its path at startup and has no
+    # way to be told a new one.
+    exec "$bin" img "$file"
+    ;;
+
+  random)
+    bin="$(wallpaper_bin)" || { echo "swww/awww is not installed" >&2; exit 1; }
+    pick="$(find "$DIR" -maxdepth 1 -type f \
+      \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' \
+         -o -iname '*.webp' -o -iname '*.gif' \) | shuf -n1)"
+    [ -n "$pick" ] || { echo "no images in $DIR" >&2; exit 1; }
+    exec "$bin" img "$pick"
+    ;;
+
+  *)
+    echo "usage: niri-wallpaper rows | set FILE | random" >&2
+    exit 1
+    ;;
+esac

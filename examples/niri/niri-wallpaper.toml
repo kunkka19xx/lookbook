@@ -1,0 +1,33 @@
+# niri has no wallpaper of its own: on Wayland the background is a layer-shell
+# surface, and something has to hold it. swww is the one worth using here
+# because it keeps a daemon holding that surface and swaps the image at
+# runtime - so setting a wallpaper is one call with no gap and no restart.
+# swaybg, the other common choice, takes its path at startup and has no way to
+# be told a new one, which turns every change into kill-and-respawn.
+#
+# A run block rather than a dir block, though a dir block would list the same
+# images. Look captures a producer's stderr and shows it at reload, and throws
+# a step's away - so this is the only shape that can tell you the tool is
+# missing instead of failing silently on Enter. The folder does not change
+# often enough for the reload-only refresh to cost anything. See the README.
+
+[niri-wallpaper]
+name    = "Wallpaper"
+icon    = "🖼️"
+aliases = ["background", "bg", "swww"]
+
+# The rows carry `path`, so they are real files to Look and the image is drawn
+# in the panel - the same as a dir row, which is the whole point of the picker.
+run     = "~/.look/bin/niri-wallpaper rows"
+format  = "json"
+
+open = "~/.look/bin/niri-wallpaper set {path}"
+
+
+# The keybind most niri configs already have, kept as a row so the folder is
+# named in one place - the script's own default, or $NIRI_WALLPAPERS.
+[niri-wallpaper-random]
+name    = "Random wallpaper"
+icon    = "🎲"
+aliases = ["shuffle wallpaper", "surprise"]
+do      = ["~/.look/bin/niri-wallpaper random"]
