@@ -1,0 +1,51 @@
+# Quit every app you have open, on macOS. The counterpart to close-windows.toml,
+# which does the same job on a Wayland or X11 desktop.
+#
+# It quits applications rather than closing windows, because that is the unit
+# macOS gives you: an app with no windows is still running, still in the Dock,
+# still holding whatever it was holding. Nothing here sends a signal to a
+# process. `tell application X to quit` is the same Apple Event the red button
+# and Cmd+Q send, so an editor with unsaved work still gets to stop and ask you
+# about it, and a document-based app still gets to restore its windows next
+# time. `killall` would take all of that away and is not what this is.
+#
+# Two names are skipped. Finder cannot usefully be quit - it owns your desktop.
+# Look is listed for the same reason its Linux twin skips `lookapp`, though on
+# macOS it never appears here anyway: Look is an LSUIElement agent with no Dock
+# icon, which is exactly what `background only is false` filters out. The line
+# stays as insurance against a future build that shows itself.
+
+[close-windows-macos]
+name    = "Quit all apps"
+icon    = "🌙"
+aliases = ["end work", "evening", "quit all", "close all", "close windows"]
+
+# A launcher makes Enter on the wrong row very cheap, and this is the line that
+# makes it expensive again. Not optional here: some of these apps are holding
+# work nobody has saved yet.
+confirm = "Quit every app except Finder?"
+
+do = ['''
+osascript <<'APPLESCRIPT'
+tell application "System Events"
+  -- `background only is false` is every app with a UI: the ones in your Dock
+  -- and your Cmd+Tab list, and not the several dozen agents and helpers that
+  -- are also processes. It is the closest macOS has to "windows you can see".
+  set appNames to name of every process whose background only is false
+end tell
+
+repeat with appName in appNames
+  -- `appName` is a reference into the list, not a string, so it is coerced
+  -- before being compared or used to address an app.
+  set n to appName as text
+  if n is not "Finder" and n is not "Look" then
+    -- An app can refuse, hang on a save dialog, or have gone away between the
+    -- listing and this line. None of that should stop the rest, and the Linux
+    -- twin swallows the same class of failure with 2>/dev/null.
+    try
+      tell application n to quit
+    end try
+  end if
+end repeat
+APPLESCRIPT
+''']

@@ -1,0 +1,40 @@
+# Your shortcut folders, and the shortcuts inside whichever one you pick.
+#
+# Independent of shortcuts.toml: install either, or both. This one earns its
+# place once the flat list has outgrown the window, which happens faster than
+# you would think because every Shortcuts template you have ever tapped
+# "Add Shortcut" on is in it.
+#
+# `[shortcuts-folders-in]` is the drill-down. Its `run` names {id}, so Look
+# never offers it as a top-level row: a folder's contents mean nothing with no
+# folder picked. It is reached with Cmd+K on a folder row.
+
+[shortcuts-folders]
+name    = "Shortcut folders"
+icon    = "📂"
+aliases = ["shortcuts folders"]
+
+run = "shortcuts list --folders"
+
+# A folder row is not a thing you can run, so Enter opens the app it lives in.
+# The contents are one Cmd+K away.
+open = "open -b com.apple.shortcuts"
+
+then = ["shortcuts-folders-in"]
+
+
+# {id} in a producer is the folder, because the folder is still the selected row
+# while these rows are being made. In the verbs below, {id} is the shortcut this
+# block just produced, and the folder has become {parent.id}.
+#
+# One thing to know if you ever hard-code a folder name here instead: a name
+# `shortcuts` does not recognise is not an error. It prints your entire library,
+# exactly as though you had passed no --folder-name at all. Drilling in from a
+# row cannot get that wrong, because the name came from `shortcuts` itself.
+[shortcuts-folders-in]
+name = "Shortcuts in folder"
+icon = "⚡"
+
+run  = "shortcuts list --folder-name {id}"
+open = "shortcuts run {id}"
+edit = "shortcuts view {id}"

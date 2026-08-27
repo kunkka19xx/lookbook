@@ -1,0 +1,66 @@
+# Every background service Homebrew manages for you, running or not.
+#
+# This is the macOS answer to the systemd example. `brew services` writes a
+# plist into ~/Library/LaunchAgents and hands it to launchd, so a formula that
+# ships a service - postgresql, redis, mysql, syncthing - starts at login and
+# keeps running without you owning a terminal window for it.
+#
+# Tab-separated rows rather than JSON, because these rows are all the same kind
+# of thing: the block's own icon is right for all of them, and the state reads
+# better as words in the subtitle than as a coloured dot. See
+# homebrew-outdated.toml for the case that does want an icon per row.
+#
+# `--json` is still what gets parsed, because the plain table is column-aligned
+# with ANSI colour in the status field, and a formula named `postgresql@14` is
+# one awk mistake away from being truncated. The fields are name, status, user,
+# file and exit_code; status is one of started, stopped, scheduled, none, error,
+# unknown. With no services installed it prints nothing at all, which is why the
+# filter has to survive empty input - jq does, silently.
+#
+# Do not install this file until you have a service. Most formulae ship none, and
+# Look refuses empty output by design: a block that produces no rows puts a red
+# "produced no rows" banner on every reload, because a silent command is far more
+# often broken than genuinely empty and it will not throw away good rows on a
+# guess. Nothing here can opt out of that. The README says which formulae have
+# services and what the banner does and does not mean.
+
+[homebrew-services]
+name    = "Brew services"
+icon    = "🍺"
+aliases = ["services", "brew services", "daemon", "background"]
+
+run = '''brew services list --json | jq -r '.[] | [
+  .name,
+  .name,
+  ([ .status,
+     (if .status == "error" then "exit " + (.exit_code | tostring) else empty end),
+     .user
+   ] | map(select(. != null and . != "")) | join(" · "))
+] | @tsv' '''
+
+# Where the plist is, what pid it has, and which log files it writes to.
+preview = "brew services info {id}"
+
+# Enter restarts, because that is what you came here to do to a service nine
+# times in ten. The question is the price of putting it on Enter: this list
+# ranks by use like every other, so the row that is one keystroke away today is
+# not the row that was one keystroke away last week.
+confirm = "Restart {title}?"
+open    = "brew services restart {id}"
+
+then = ["homebrew-services-stop", "homebrew-services-start"]
+
+
+[homebrew-services-stop]
+name    = "Stop service"
+icon    = "⏹"
+confirm = "Stop {title}?"
+do      = ["brew services stop {id}"]
+
+
+# No confirm: starting something that is not running breaks nothing, and a
+# question on every row is a question nobody reads by the third time.
+[homebrew-services-start]
+name = "Start service"
+icon = "▶️"
+do   = ["brew services start {id}"]

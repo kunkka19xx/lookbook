@@ -58,9 +58,34 @@ engine_of() {
     esac
 }
 
-# Every place a browser keeps profiles on Linux: the ordinary one, Snap's and
-# Flatpak's. macOS and Windows put them elsewhere; see the README.
+# Two conventions, and a browser follows whichever one the platform has: Linux
+# puts profiles under ~/.config and ~/.mozilla, macOS puts all of them under one
+# Application Support directory. Windows is a third and is not handled here.
+case "$(uname -s)" in
+    Darwin) OS=macos ;;
+    *)      OS=linux ;;
+esac
+
+# Every place a browser keeps profiles: on Linux the ordinary location plus
+# Snap's and Flatpak's, on macOS the single directory each vendor uses. A
+# browser that is not installed simply has no such directory, and the glob that
+# reads it matches nothing, so listing all of them costs nothing.
 bases_of() {
+    if [ "$OS" = macos ]; then
+        local support="$HOME/Library/Application Support"
+        # Vendor-named, capitalised, and two of them contain a space. Quoted at
+        # every use for that reason, here and in the loops below.
+        case "$1" in
+            firefox)  printf '%s\n' "$support/Firefox/Profiles" ;;
+            brave)    printf '%s\n' "$support/BraveSoftware/Brave-Browser" ;;
+            chrome)   printf '%s\n' "$support/Google/Chrome" ;;
+            chromium) printf '%s\n' "$support/Chromium" ;;
+            edge)     printf '%s\n' "$support/Microsoft Edge" ;;
+            vivaldi)  printf '%s\n' "$support/Vivaldi" ;;
+        esac
+        return
+    fi
+
     case "$1" in
         firefox)
             printf '%s\n' \
@@ -175,7 +200,15 @@ for browser in $selected; do
                 # A Chromium profile directory is whichever one holds a History
                 # file. The rest of that folder is extensions and crash reports,
                 # and `add` skips anything that is not a file anyway.
-                for db in "$base"/*/History; do add "$db" "$CHROMIUM"; done
+                for db in "$base"/*/History; do
+                    # Every Chromium install has these two and neither holds a
+                    # page you have read, but each would still spend one of the
+                    # ten ATTACH slots. Skipping them buys a real profile.
+                    case "$db" in
+                        *"/Guest Profile/"* | *"/System Profile/"*) continue ;;
+                    esac
+                    add "$db" "$CHROMIUM"
+                done
             done <<< "$(bases_of "$browser")" ;;
     esac
 done

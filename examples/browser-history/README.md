@@ -11,7 +11,7 @@ Firefox and the Chromium browsers are read together and de-duplicated by URL, so
 
 The binary is always `sqlite3`; the package often is not. macOS ships it at `/usr/bin/sqlite3` and needs nothing installed. Debian and Ubuntu call the package `sqlite3`; Arch, Fedora and nixpkgs call it `sqlite`. A language binding is not a substitute: this uses `readfile()` and `writefile()`, which exist only in the command-line shell and not in the library every binding wraps.
 
-**Platforms.** Linux. Tested against Firefox and Brave on Linux. macOS and Windows keep browser profiles in different places and need a different `open`; see Customise.
+**Platforms.** Linux and macOS. Tested against Firefox and Brave on Linux, and against Firefox, Brave, Chrome and Edge on macOS. The script picks the profile locations from `uname`, and `open` tries both spellings, so there is nothing to edit for either. Windows keeps profiles somewhere else again and is not handled; see Customise.
 
 **It reads your browsing history and makes it searchable in your launcher.** That is the point of it, and it sends nothing anywhere, but three things are worth saying out loud before you install it.
 
@@ -52,8 +52,9 @@ run = "LOOK_HISTORY_BROWSERS=firefox ~/.look/bin/browser-history-rows"
 | `LOOK_HISTORY_ICONS` | `~/.look/cache/favicons` | Where the per-host PNGs are written |
 | `LOOK_HISTORY_MAX_DB` | `10` | Profile databases to attach. SQLite is built with `MAX_ATTACHED=10` |
 
-- **`open` is Linux as written.** macOS: `open {id}`. Windows: `start "" {id}`.
-- **Profile paths are Linux.** The script looks in `~/.mozilla/firefox`, `~/.config/<browser>`, plus the Snap and Flatpak locations. macOS keeps Firefox in `~/Library/Application Support/Firefox/Profiles` and Chromium browsers in `~/Library/Application Support/<vendor>`; edit `bases_of()`.
+- **`open` covers both platforms already.** The line is `command -v xdg-open ... && xdg-open {id} || open {id}`, because only one of those two commands exists on any given machine. On Windows, replace the whole thing with `start "" {id}`.
+- **Profile paths follow `uname`.** On Linux the script reads `~/.mozilla/firefox`, `~/.config/<browser>` and the Snap and Flatpak locations; on macOS, the vendor directories under `~/Library/Application Support`. Both lists are in `bases_of()`, which is also where a browser it does not know goes — add the name to `engine_of()` beside it, saying which engine it uses.
+- **Chromium's Guest and System profiles are skipped.** They exist on every install, hold nothing you have browsed, and would each spend one of the ten ATTACH slots.
 
 **Narrowing browsers reaches further back.** The row and byte budgets are shared across everything merged, so `auto` spends them on whatever is most recent across all your browsers. On the machine this was written for, `auto` reached back twelve days while `LOOK_HISTORY_BROWSERS=brave` alone reached three months. If a browser you care about keeps falling off the end, name it on its own.
 

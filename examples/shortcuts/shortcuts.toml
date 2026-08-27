@@ -1,0 +1,35 @@
+# Every shortcut from the Shortcuts app, as rows. Enter runs one.
+#
+# The rare example that needs nothing installed: `shortcuts` has been in
+# /usr/bin since Monterey, and it sees the same library iCloud syncs to your
+# other machines.
+#
+# `shortcuts list` prints one name per line and nothing else, which is already
+# the `lines` format: a line with no tabs is a row whose id and title are that
+# text. Names with spaces, accents or emoji in them need no quoting from you.
+
+[shortcuts]
+name    = "Shortcuts"
+icon    = "⚡"
+aliases = ["shortcut", "automation", "run shortcut"]
+
+run = "shortcuts list"
+
+# Running one is silent by design. `shortcuts run` prints nothing and opens no
+# window: a shortcut that shows you something shows it itself, and one that does
+# not simply happens. Nothing here reports back that it worked.
+open = "shortcuts run {id}"
+
+# There is nothing to edit about the row itself, so Cmd+E opens the shortcut in
+# the Shortcuts app, which is where you would actually go to change it.
+edit = "shortcuts view {id}"
+
+then = ["shortcuts-view"]
+
+
+# The same thing Cmd+E does, as a row in the action menu. Worth having twice: a
+# verb is only discoverable by someone who already knows the chord.
+[shortcuts-view]
+name = "Open in Shortcuts"
+icon = "✏️"
+do   = ["shortcuts view {id}"]

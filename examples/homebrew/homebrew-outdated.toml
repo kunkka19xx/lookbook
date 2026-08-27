@@ -1,0 +1,60 @@
+# Everything Homebrew would upgrade, formulae and casks together, one row each.
+# Enter upgrades that one package in a terminal so you can watch it happen.
+#
+# `format = "json"` is here for the per-row `icon`: these rows are genuinely two
+# kinds of thing. A formula is a command-line package Homebrew builds or pours;
+# a cask is a .app it downloads and drops in /Applications. They upgrade with
+# the same command but they are not the same thing, and one glyph says so
+# without spending a word of the subtitle on it.
+#
+# `--json=v2` prints {"formulae": [...], "casks": [...]}, and both arrays carry
+# the same three fields this needs: name, installed_versions, current_version.
+# The `[]?` is what makes an empty array quiet rather than an error.
+
+[homebrew-outdated]
+name    = "Outdated"
+icon    = "🍺"
+aliases = ["brew", "homebrew", "upgrade", "updates"]
+
+run = '''brew outdated --json=v2 | jq -c '
+  (.formulae[]? | {id: .name, title: .name, icon: "🍺",
+                   subtitle: ((.installed_versions | join(", ")) + "  →  " + .current_version)}),
+  (.casks[]?    | {id: .name, title: .name, icon: "📦",
+                   subtitle: ((.installed_versions | join(", ")) + "  →  " + .current_version)})
+' '''
+format = "json"
+
+# 5s is generous for `brew outdated` against the local Cellar, but `brew` checks
+# whether it should auto-update itself first, and that one goes to the network.
+timeout = "20s"
+
+# HOMEBREW_NO_ANALYTICS is not a privacy preference here, it is the difference
+# between a preview that fills and one that times out. The analytics block at the
+# bottom of `brew info` is fetched over the network: with it, this takes ~3.7s
+# against a fixed 5s preview timeout; without it, ~0.5s.
+preview = "HOMEBREW_NO_ANALYTICS=1 brew info {id}"
+
+# Upgrading is minutes of scrolling output, and a launcher gives you nowhere to
+# watch it. So this hands the job to a terminal and lets it own the window.
+# Ghostty as written; the README has the other spellings.
+open = "open -na Ghostty --args -e brew upgrade {id}"
+
+then = ["homebrew-outdated-all", "homebrew-outdated-home"]
+
+
+# No confirm on upgrading one package, because that is the row you deliberately
+# picked. This one gets a question: it is every package at once, it is long, and
+# nothing about the row you were looking at hints that it is what happens next.
+[homebrew-outdated-all]
+name    = "Upgrade everything"
+icon    = "⬆️"
+confirm = "Upgrade every outdated package?"
+do      = ["open -na Ghostty --args -e brew upgrade"]
+
+
+# `brew home` opens the project's own page, which is where a changelog lives.
+# Worth reading before you upgrade the thing your work depends on.
+[homebrew-outdated-home]
+name = "Open homepage"
+icon = "🌐"
+do   = ["brew home {id}"]

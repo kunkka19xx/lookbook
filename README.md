@@ -58,7 +58,7 @@ Every file here was written against somebody else's setup, and what makes an exa
 The four that catch people:
 
 - **A path that is not yours.** `dev-projects` lists `~/dev`. If your repos are in `~/code` or `~/work`, you get an empty list and nothing else.
-- **An app you do not have.** `ssh` and `docker` open Ghostty, `tmux` attaches with WezTerm, `work-setup` opens Slack, Ghostty and Safari, `dev-projects` edits with `code`.
+- **An app you do not have.** `ssh` and `docker` open Ghostty, `homebrew` upgrades in it, `tmux` attaches with WezTerm, `work-setup` opens Slack, Ghostty and Safari, `dev-projects` edits with `code`.
 - **`open`, which is macOS.** On Linux that is `xdg-open`, on Windows `start ""`. Most of these were tested on macOS only; the table below says which.
 - **A file that has to be there.** `ssh` reads your `~/.ssh/config`. Anything shipping a `bin/` script needs that script in `~/.look/bin/` first, which its README tells you.
 
@@ -84,10 +84,12 @@ The **Platforms** column is what the author tested, not what might work. Where a
 | [git](examples/git)                   | git        | two files in one folder; drill-downs, `confirm`, `{parent.*}` | macOS, Linux, Windows |
 | [docker](examples/docker)             | docker, jq | `format = "json"`, per-row icons, a helper script             | macOS                 |
 | [tmux](examples/tmux)                 | tmux       | a `bin/` script doing real work; session per project          | macOS                 |
-| [browser-history](examples/browser-history) | sqlite3    | `run` + `format = "json"`: favicons as per-row icons, browsers picked by env var | Linux                 |
-| [close-windows](examples/close-windows) | jq         | a multi-line `do` step; `confirm` on something irreversible          | Linux (sway; more untested) |
+| [browser-history](examples/browser-history) | sqlite3    | `run` + `format = "json"`: favicons as per-row icons, browsers picked by env var | Linux, macOS          |
+| [close-windows](examples/close-windows) | jq (Linux) | a multi-line `do` step; `confirm` on something irreversible; one file per OS | Linux (sway; more untested), macOS |
 | [systemd](examples/systemd)           | systemd    | tab-separated rows, `preview` from a log, three guarded actions      | Linux                 |
 | [bookmarks](examples/bookmarks)       | none       | `file`: a list you keep by hand, and the no-TOML script trick        | Linux                 |
+| [shortcuts](examples/shortcuts) | none       | `run` with nothing to install; a `then` drill-down by folder         | macOS                 |
+| [homebrew](examples/homebrew) | brew, jq   | two lists in one folder; `confirm` on Enter, and a `preview` that has to be fast | macOS                 |
 
 ## Read before you install
 

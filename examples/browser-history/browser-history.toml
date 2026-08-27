@@ -23,9 +23,11 @@ aliases = ["history", "web", "url", "browser"]
 # through a LOGIN shell, which never reads ~/.zshrc or ~/.bashrc.
 run = "~/.look/bin/browser-history-rows"
 
-# The row id is the URL, so Enter hands it to your default browser.
-# macOS: "open {id}". Windows: "start \"\" {id}".
-open = "xdg-open {id}"
+# The row id is the URL, so Enter hands it to your default browser. Both
+# spellings, because the script reads profiles on either platform and only one
+# of these commands exists on any given machine: xdg-open is Linux, open is
+# macOS. On Windows this is `start "" {id}` and neither branch applies.
+open = "command -v xdg-open >/dev/null 2>&1 && xdg-open {id} || open {id}"
 
 # The full URL, which the row truncates: this is where you check what Enter
 # opens before you press it.
