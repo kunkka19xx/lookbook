@@ -91,6 +91,7 @@ The **Platforms** column is what the author tested, not what might work. Where a
 | [shortcuts](examples/shortcuts) | none       | `run` with nothing to install; a `then` drill-down by folder         | macOS                 |
 | [homebrew](examples/homebrew) | brew, jq   | two lists in one folder; `confirm` on Enter, and a `preview` that has to be fast | macOS                 |
 | [niri](examples/niri)                 | niri, swww, wl-clipboard | image rows with previews; which block shape can warn a tool is missing | Linux (niri)          |
+| [meeting](examples/meeting) | none       | `do` + `preview` for clock-dependent data that must not go stale | macOS                 |
 
 ## Read before you install
 

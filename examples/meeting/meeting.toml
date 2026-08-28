@@ -1,0 +1,68 @@
+# Your next meeting, and Enter joins it.
+#
+# Both blocks are `do`, not `run`, and that is the whole design. A `run` block's
+# rows are produced on reload and cached until the next one, which is what keeps
+# search instant - and exactly wrong for a countdown. "Standup, in 15 min" would
+# be an hour stale by lunchtime and confidently wrong.
+#
+# A `do` block has one row whose text never changes, so nothing can go stale.
+# The lookup happens when you press Enter, and `preview` runs live for whichever
+# row is selected, so the panel tells you what Enter would join at the moment
+# you are looking at it.
+#
+# It also sidesteps the empty-list problem: a `run` block that produces nothing
+# puts a red banner on every reload, and "no meetings today" is the normal state
+# most evenings and every weekend. These rows are always exactly one row.
+#
+# The work is in bin/meeting-next, which reads macOS's own EventKit store with
+# the sqlite3 already in /usr/bin. Nothing to install. That store is private and
+# undocumented, and the README says what that costs you.
+
+[meeting]
+name = "Join next meeting"
+icon = "📹"
+
+# Deliberately NOT "join": Look answers that itself on macOS with its own
+# EventKit-backed row, and two rows competing for one word helps nobody. See
+# the README for which one you want.
+aliases = ["meeting", "next meeting", "call", "standup", "huddle"]
+
+# What Enter joins, live: the title, the countdown, and the link itself so you
+# can see where you are about to be sent.
+preview = "~/.look/bin/meeting-next"
+
+do = ["~/.look/bin/meeting-next --join"]
+
+# Cmd+K to see them all and pick one, instead of trusting "next".
+then = ["meeting-list"]
+
+
+# The rest of the day, in the panel. Enter opens Calendar, because a list is
+# something you read rather than something you run.
+[meeting-agenda]
+name    = "Today's meetings"
+icon    = "🗓️"
+aliases = ["agenda", "schedule", "my day", "what is next"]
+
+preview = "~/.look/bin/meeting-next --agenda"
+
+do   = ["open -b com.apple.iCal"]
+then = ["meeting-list"]
+
+
+# One row per meeting, reached with Cmd+K from either row above.
+#
+# `{query}` is doing two jobs. It filters the list by whatever you had typed to
+# find the row, so "meeting standup" then Cmd+K lands on the standups. And it is
+# a placeholder, which is what keeps this block OUT of the top-level index: a
+# producer naming a placeholder is only ever reached through another block's
+# `then`. That matters more than it sounds, because a drilled block is run LIVE
+# every time you descend rather than served from the reload cache. So these rows
+# carry a countdown that is right when you read it, and an empty list is simply
+# an empty level instead of a red banner on every reload.
+[meeting-list]
+name = "Pick a meeting"
+icon = "📋"
+
+run  = "~/.look/bin/meeting-next --rows {query}"
+open = "~/.look/bin/meeting-next --open {id}"

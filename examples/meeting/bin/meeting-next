@@ -1,0 +1,336 @@
+#!/usr/bin/env bash
+# Your next meeting, and the link that joins it. Declared by meeting.toml.
+#
+#   meeting-next            what is next, for the preview pane
+#   meeting-next --join     open its join link
+#   meeting-next --agenda   what is left today
+#
+# Reads macOS's own EventKit store with the sqlite3 that ships in /usr/bin, so
+# there is nothing to install. That store is PRIVATE and undocumented: Apple can
+# rename a column in any point release, and the day they do this prints "no
+# meetings" rather than an error. See the README before you rely on it.
+set -u
+
+# --------------------------------------------------------------- settings --
+# Set these on the `run`/`do` line in meeting.toml rather than in ~/.zshrc:
+# Look runs commands through a LOGIN shell, which never reads your rc file.
+
+# How far ahead to look. 48h by default so "next meeting" on a Friday evening
+# finds Monday's rather than nothing.
+AHEAD_HOURS=${LOOK_MEETING_AHEAD_HOURS:-48}
+
+# How far behind. A meeting that started ten minutes ago is the one you are
+# late for and still want to join, so the window opens slightly before now.
+BEHIND_MINUTES=${LOOK_MEETING_BEHIND_MINUTES:-15}
+
+# Rows listed by --agenda.
+AGENDA_LIMIT=${LOOK_MEETING_AGENDA_LIMIT:-10}
+
+DB=${LOOK_MEETING_DB:-$HOME/Library/Group Containers/group.com.apple.calendar/Calendar.sqlitedb}
+
+# Core Data counts seconds from 2001-01-01, not 1970. Every date in this
+# database is offset by this much; forget it and every meeting lands in 1970.
+readonly APPLE_EPOCH=978307200
+
+# The services whose links are worth recognising when Apple has not already
+# pulled one out into `conference_url`. Matched against the location and the
+# notes, in that order.
+readonly PROVIDER_RE='https?://[^[:space:]<>"]*(zoom\.us|meet\.google\.com|teams\.microsoft\.com|teams\.live\.com|webex\.com|whereby\.com|bluejeans\.com|chime\.aws|gotomeet\.me)[^[:space:]<>",]*'
+
+# ASCII unit separator, and NOT a tab. `read` with IFS set to a whitespace
+# character collapses runs of it, so a meeting with no conference_url and no
+# location silently shifts every field left of it: the notes end up in `url`,
+# and "no join link" becomes whichever text landed there. A non-whitespace
+# separator keeps empty fields empty. It cannot occur in a calendar entry.
+readonly SEP=$'\037'
+
+command -v sqlite3 >/dev/null 2>&1 || {
+    echo "sqlite3 is not installed" >&2
+    exit 1
+}
+
+[ -f "$DB" ] || {
+    echo "no calendar store at $DB" >&2
+    exit 1
+}
+
+tmp=$(mktemp -d) || exit 1
+trap 'rm -rf "$tmp"' EXIT INT TERM
+
+# Calendar holds this open and checkpoints lazily, so it is read from a copy
+# taken WITH its -wal: no lock is taken, and events added this session are not
+# missing. No -shm - SQLite rebuilds it from the WAL. Same reason and same
+# shape as the browser-history example.
+cp "$DB" "$tmp/cal.sqlitedb" 2>/dev/null || {
+    echo "could not read the calendar store (Full Disk Access?)" >&2
+    exit 1
+}
+[ -f "$DB-wal" ] && cp "$DB-wal" "$tmp/cal.sqlitedb-wal" 2>/dev/null
+
+now=$(date +%s)
+from=$(( now - BEHIND_MINUTES * 60 - APPLE_EPOCH ))
+until=$(( now + AHEAD_HOURS * 3600 - APPLE_EPOCH ))
+
+# Two sources, unioned, because neither is complete on its own:
+#
+#   1. Ordinary events carry their own start_date.
+#   2. A RECURRING event does not. It is stored once with has_recurrences=1 and
+#      a rule in the Recurrence table, so a weekly standup would be invisible
+#      here - the single stored row sits on whatever date the series began.
+#      OccurrenceCache is Apple's own expansion of those rules into dated rows,
+#      which is the whole reason this script does not have to parse an RRULE.
+#
+# all_day is excluded throughout: birthdays and public holidays are not
+# meetings, and an all-day row has a NULL start time anyway.
+
+# Every projected text column goes through this. One row of output has to be one
+# LINE of output, and calendar text is the opposite of that by nature: a Google
+# Meet invite writes a description of six lines, and one embedded newline splits
+# the row in two, shifts every field, and hands `relative()` the words "Please do
+# not edit this section." Tabs and the separator itself go the same way.
+scrub() {
+    printf "replace(replace(replace(replace(%s, char(31),' '), char(9),' '), char(10),' '), char(13),' ')" "$1"
+}
+
+query() {
+    sqlite3 -batch -noheader -separator "$SEP" "$tmp/cal.sqlitedb" "
+        WITH events(summary, starts, ends, conference_url, url, notes, place) AS (
+            SELECT ci.summary, ci.start_date, ci.end_date,
+                   ci.conference_url, ci.url, ci.description, loc.title
+            FROM CalendarItem ci
+            LEFT JOIN Location loc ON loc.ROWID = ci.location_id
+            WHERE ci.all_day = 0
+              AND ci.has_recurrences = 0
+              AND ci.start_date IS NOT NULL
+
+            UNION ALL
+
+            SELECT ci.summary, oc.occurrence_start_date, oc.occurrence_end_date,
+                   ci.conference_url, ci.url, ci.description, loc.title
+            FROM OccurrenceCache oc
+            JOIN CalendarItem ci ON ci.ROWID = oc.event_id
+            LEFT JOIN Location loc ON loc.ROWID = ci.location_id
+            WHERE ci.all_day = 0
+              AND oc.occurrence_start_date IS NOT NULL
+        )
+        SELECT CAST(starts + $APPLE_EPOCH AS INTEGER),
+               CAST(coalesce(ends, starts) + $APPLE_EPOCH AS INTEGER),
+               $(scrub "coalesce(nullif(trim(summary), ''), '(no title)')"),
+               $(scrub "coalesce(conference_url, '')"),
+               $(scrub "coalesce(url, '')"),
+               $(scrub "coalesce(place, '')"),
+               $(scrub "coalesce(notes, '')")
+        FROM events
+        WHERE starts >= $from AND starts <= $until
+        ORDER BY starts
+        LIMIT $1;
+    " 2>/dev/null
+}
+
+# conference_url is Apple's own extracted link, so it is tried first - but do
+# not assume it is filled. Against a synced Google Workspace account it was
+# empty for every invite, with the link sitting in the notes body instead, so
+# the scan below is the path that normally runs rather than the exception.
+#
+# The notes of a Meet invite hold several URLs and only one of them is a room:
+# tel.meet and support.google.com are also in there. That is why PROVIDER_RE
+# names hosts rather than matching any https:// it finds.
+join_link() {
+    local conference="$1" url="$2" haystack="$3" found
+    if [ -n "$conference" ]; then
+        printf '%s' "$conference"
+        return 0
+    fi
+    found=$(printf '%s' "$haystack" | grep -Eom1 "$PROVIDER_RE")
+    if [ -n "$found" ]; then
+        printf '%s' "$found"
+        return 0
+    fi
+    # A bare `url` is whatever the organiser attached. It is a link to
+    # something, but not necessarily to a room, so it is the last resort.
+    if [ -n "$url" ]; then
+        printf '%s' "$url"
+        return 0
+    fi
+    return 1
+}
+
+# "in 12 min", "in 2 h 5 min", "started 3 min ago". Rounded up, so a meeting 61
+# seconds out reads "in 2 min" rather than "in 1 min" for most of that minute.
+relative() {
+    local seconds=$(( $1 - now )) mins
+    if [ "$seconds" -lt 0 ]; then
+        mins=$(( (-seconds + 59) / 60 ))
+        printf 'started %s min ago' "$mins"
+        return
+    fi
+    mins=$(( (seconds + 59) / 60 ))
+    if [ "$mins" -lt 60 ]; then
+        printf 'in %s min' "$mins"
+    elif [ $(( mins % 60 )) -eq 0 ]; then
+        printf 'in %sh' "$(( mins / 60 ))"
+    else
+        printf 'in %sh %sm' "$(( mins / 60 ))" "$(( mins % 60 ))"
+    fi
+}
+
+# Which service a link belongs to. "Google Meet" is what you want to read; the
+# URL is what you want to check, and they are not the same job.
+provider_of() {
+    case "$1" in
+        *meet.google.com*)                    printf 'Google Meet' ;;
+        *zoom.us*)                            printf 'Zoom' ;;
+        *teams.microsoft.com* | *teams.live.com*) printf 'Microsoft Teams' ;;
+        *webex.com*)                          printf 'Webex' ;;
+        *whereby.com*)                        printf 'Whereby' ;;
+        *bluejeans.com*)                      printf 'BlueJeans' ;;
+        *chime.aws*)                          printf 'Amazon Chime' ;;
+        *gotomeet.me*)                        printf 'GoTo Meeting' ;;
+        http*)                                printf 'Link' ;;
+        *)                                    printf '' ;;
+    esac
+}
+
+# The scheme is nine characters of nothing. Dropping it leaves the part that
+# identifies the room, which is the part worth reading before you press Enter.
+short_link() {
+    printf '%s' "${1#*://}"
+}
+
+# label + value, aligned. The panel is monospaced, so a fixed-width label
+# column is free and makes four facts scannable instead of read.
+field() {
+    [ -n "$2" ] || return 0
+    printf '  %-7s %s\n' "$1" "$2"
+}
+
+case "${1:-}" in
+    --join)
+        IFS="$SEP" read -r starts ends title conference url place notes < <(query 1)
+        if [ -z "${starts:-}" ]; then
+            echo "no meeting in the next $AHEAD_HOURS hours" >&2
+            exit 1
+        fi
+        if link=$(join_link "$conference" "$url" "$place $notes"); then
+            exec open "$link"
+        fi
+        # Nothing to join is not a failure: a meeting with a room number and no
+        # link is a real meeting. Say which one, and open Calendar on it.
+        echo "\"$title\" ($(relative "$starts")) has no join link" >&2
+        exec open -b com.apple.iCal
+        ;;
+
+    --agenda)
+        printed=0
+        while IFS="$SEP" read -r starts ends title conference url place notes; do
+            [ -n "${starts:-}" ] || continue
+            printf '%s  %s\n' "$(date -r "$starts" '+%a %H:%M')" "$title"
+            if link=$(join_link "$conference" "$url" "$place $notes"); then
+                printf '%11s%s  ·  %s\n' "" \
+                    "$(relative "$starts")" "$(provider_of "$link")"
+            else
+                printf '%11s%s  ·  %s\n' "" \
+                    "$(relative "$starts")" "${place:-no link}"
+            fi
+            printed=$(( printed + 1 ))
+        done < <(query "$AGENDA_LIMIT")
+        # An `if`, not `[ ... ] && echo`: that form is the LAST command in this
+        # branch, so on the normal path (something was printed) it evaluates
+        # false and the script exits 1. Look reports a failing preview as an
+        # error instead of showing its output, so a full agenda would have
+        # rendered as a failure.
+        if [ "$printed" -eq 0 ]; then
+            echo "Nothing in the next $AHEAD_HOURS hours."
+        fi
+        ;;
+
+    # Two rows, not one: what is next, and a single line naming what follows it.
+    # Knowing there is another at 19:00 is most of what you wanted to ask.
+    '')
+        starts='' ends='' title='' conference='' url='' place='' notes=''
+        next_starts='' next_title=''
+        {
+            IFS="$SEP" read -r starts ends title conference url place notes
+            IFS="$SEP" read -r next_starts _ next_title _ _ _ _
+        } < <(query 2)
+
+        if [ -z "$starts" ]; then
+            echo "No meetings in the next $AHEAD_HOURS hours."
+            exit 0
+        fi
+
+        printf '%s\n\n' "$title"
+        field starts "$(relative "$starts")"
+        field time "$(date -r "$starts" '+%a %H:%M') – $(date -r "$ends" '+%H:%M')"
+        if link=$(join_link "$conference" "$url" "$place $notes"); then
+            field join "$(provider_of "$link")"
+            field link "$(short_link "$link")"
+        else
+            field join "no link"
+        fi
+        # Only when it says something the link does not. A Meet invite often
+        # repeats the URL here, and printing it twice is not more information.
+        case "$place" in
+            '' | http*) ;;
+            *) field where "$place" ;;
+        esac
+        if [ -n "$next_starts" ]; then
+            # The weekday only when it differs, so a day with three meetings in
+            # it does not spend a column repeating "Fri". And the title clipped,
+            # because this is a footnote about what follows - the panel is
+            # narrow, and a wrapped second line reads as a second meeting.
+            if [ "$(date -r "$next_starts" '+%j')" = "$(date -r "$starts" '+%j')" ]; then
+                when=$(date -r "$next_starts" '+%H:%M')
+            else
+                when=$(date -r "$next_starts" '+%a %H:%M')
+            fi
+            if [ "${#next_title}" -gt 26 ]; then
+                next_title="${next_title:0:25}…"
+            fi
+            printf '\n'
+            field then "$when  $next_title"
+        fi
+        ;;
+
+    # One row per meeting, for the drill-down in meeting.toml. Tab separated:
+    # id, title, subtitle - which is the `lines` format with nothing declared.
+    #
+    # The id is the join link, so `--open` gets handed a URL and Enter needs no
+    # second lookup. A meeting with no link cannot have an empty id (Look drops
+    # those rows), and two link-less meetings must not collide into one row, so
+    # they are keyed by start time instead.
+    --rows)
+        filter=$(printf '%s' "${2:-}" | tr '[:upper:]' '[:lower:]')
+        while IFS="$SEP" read -r starts ends title conference url place notes; do
+            [ -n "${starts:-}" ] || continue
+            case "$(printf '%s' "$title" | tr '[:upper:]' '[:lower:]')" in
+                *"$filter"*) ;;
+                *) continue ;;
+            esac
+            if link=$(join_link "$conference" "$url" "$place $notes"); then
+                where=$(provider_of "$link")
+            else
+                link="calendar:$starts"
+                where="no link"
+            fi
+            printf '%s\t%s\t%s – %s  ·  %s  ·  %s\n' \
+                "$link" "$title" \
+                "$(date -r "$starts" '+%a %H:%M')" "$(date -r "$ends" '+%H:%M')" \
+                "$(relative "$starts")" "$where"
+        done < <(query "$AGENDA_LIMIT")
+        ;;
+
+    # Enter on one of those rows. Anything that is not a URL is the sentinel
+    # above, which means the meeting is real but has nowhere to join.
+    --open)
+        case "${2:-}" in
+            http://* | https://*) exec open "$2" ;;
+            *) exec open -b com.apple.iCal ;;
+        esac
+        ;;
+
+    *)
+        echo "usage: meeting-next [--join|--agenda|--rows [filter]|--open <target>]" >&2
+        exit 2
+        ;;
+esac
