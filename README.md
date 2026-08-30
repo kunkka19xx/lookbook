@@ -55,8 +55,9 @@ Copy only the `.toml`. Look reads `~/.look/sources/` flat, so it never looks ins
 
 Every file here was written against somebody else's setup, and what makes an example useful is exactly what makes it personal: a projects directory, a terminal, an editor. Open the `.toml` and change those lines before you reload.
 
-The four that catch people:
+The five that catch people:
 
+- **A name or alias that is already busy on your machine.** This one is silent and easy to miss. A block's `name` and `aliases` are what you type to reach its rows, and they compete with everything Look already indexes: your apps, files, folders, settings and history. `dev-projects` ships `aliases = ["repo", "git", "code"]`, and on a machine with a `~/code` folder or VS Code installed, typing `code` now returns a mixture. Nothing is broken and nothing is reported; the list is just muddier than it was. Prefer a word that is distinctive on **your** machine, and reach for `bias` only when you want a generic word anyway. See [Choosing what to type](#choosing-what-to-type) below.
 - **A path that is not yours.** `dev-projects` lists `~/dev`. If your repos are in `~/code` or `~/work`, you get an empty list and nothing else.
 - **An app you do not have.** `ssh` and `docker` open Ghostty, `homebrew` upgrades in it, `tmux` attaches with WezTerm, `work-setup` opens Slack, Ghostty and Safari, `dev-projects` edits with `code`.
 - **`open`, which is macOS.** On Linux that is `xdg-open`, on Windows `start ""`. Most of these were tested on macOS only; the table below says which.
@@ -71,6 +72,17 @@ look sources: [dev-projects] could not read /home/you/dev
 ```
 
 Every line it prints starts `look sources:` and names the block, which is the fastest way to tell a source that is misconfigured from one that is simply empty.
+
+### Choosing what to type
+
+`name` and `aliases` are the block's handles. Two rules keep them out of the way of what is already on your machine:
+
+- **Distinctive beats short.** A word that means something else to your computer costs you every time you type it. `notes`, `files`, `code`, `git`, `downloads` and `settings` all collide with something on a normal machine. `zk`, `worktrees` or `standup` collide with nothing.
+- **Two words beat one.** `name = "tmux sessions"` is reachable by typing either word and matches far less than `sessions` alone.
+
+If you do want a generic word, that is a ranking decision rather than a naming one, and `bias` is the knob: positive lifts the whole block above what it competes with, negative sinks it below. It applies to every query, not only the one you had in mind.
+
+Block **ids** (the `[header]`) are a separate thing and do not affect what you type. They only have to be unique inside `~/.look/sources/`, which is why every example here prefixes them with its folder name. Rename a block id and it loses that block's usage history, so pick one and leave it.
 
 ## The examples
 

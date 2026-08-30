@@ -284,6 +284,9 @@ norm AS (
       -- below every TEXT rather than converting: without it the comparison is
       -- false for every row and the window silently empties the list.
       AND ($DAYS = 0 OR t > CAST(strftime('%s', 'now', '-$DAYS days') AS INTEGER))
+      -- Google's click-through interstitial. Never a destination you return to,
+      -- and always untitled, so the raw redirect URL became the row's title.
+      AND rest NOT LIKE '%google.%/url?%'
 ),
 -- Grouped on the scheme-less URL, so one page reached over http and later over
 -- https is one row, and a page open in two browsers is one row rather than two.
@@ -294,6 +297,42 @@ kept AS (
     SELECT max(url) AS url, rest, max(title) AS title, max(t) AS t
     FROM norm
     GROUP BY rest
+),
+-- Exactly the two strings a row will print, computed once so the next step can
+-- group on them and the final SELECT can just hand them over.
+--
+-- title: every anchor of one page carries that page's title, so six rows read
+-- identically. The fragment is what tells them apart, and on a hash-routed site
+-- it is the only thing that ever did. Appended to a real title only: an
+-- untitled row falls back to the URL, which carries the fragment already.
+--
+-- subtitle: everything before the first '?' or '#'. What follows either one is
+-- a message id, a tracking parameter or a scroll anchor, thirty characters that
+-- read as noise and push the part you recognise off the row.
+shown AS (
+    SELECT url, t, rest,
+        CASE
+            WHEN title IS NULL THEN substr(rest, 1, 110)
+            ELSE substr(title, 1, 110) || CASE
+                WHEN instr(rest, '#') > 0 THEN '  ›  ' || substr(rest, instr(rest, '#') + 1)
+                ELSE ''
+            END
+        END AS disp_title,
+        rtrim(substr(rest, 1, min(
+            CASE WHEN instr(rest, '?') > 0 THEN instr(rest, '?') - 1 ELSE length(rest) END,
+            CASE WHEN instr(rest, '#') > 0 THEN instr(rest, '#') - 1 ELSE length(rest) END
+        )), '/') AS bare
+    FROM kept
+),
+-- Two rows a person cannot tell apart are one row. `kept` groups on the exact
+-- URL, so `reddit.com` and `reddit.com/?feed=home` survive it as a pair that
+-- prints identically. Grouped on both printed strings rather than on the URL,
+-- so a hash-routed site keeps its routes: those differ in the title. Keeps the
+-- most recent - SQLite takes the bare columns from the max(t) row.
+final AS (
+    SELECT url, disp_title, bare, rest, max(t) AS t
+    FROM shown
+    GROUP BY disp_title, bare
     ORDER BY t DESC
     LIMIT $LIMIT
 )
@@ -301,19 +340,20 @@ kept AS (
 -- read identically, and untitled rows had nothing else to show.
 SELECT json_object(
     'id', url,
-    'title', substr(coalesce(title, rest), 1, 110),
+    'title', disp_title,
     -- The middle is what a long one loses: the host says which site, the tail
     -- says which page, so both ends have to survive.
     'subtitle', CASE
-        WHEN length(rest) <= 72 THEN rest
-        ELSE substr(rest, 1, 40) || '…' || substr(rest, length(rest) - 28)
-    END || '  ·  ' || date(t, 'unixepoch', 'localtime'),
+        WHEN length(bare) <= 44 THEN bare
+        ELSE substr(bare, 1, 26) || '…' || substr(bare, length(bare) - 16)
+    END,
     -- Only when the file is really there: an unresolvable icon path is drawn as
     -- its own text. readfile() answers NULL for a miss, and so does the CASE,
     -- which is read as no icon. Tested and returned as one value, so the check
     -- and the answer cannot name different files.
     'icon', CASE WHEN readfile(icon_path) IS NOT NULL THEN icon_path END
 )
-FROM (SELECT url, title, t, rest, '$ICON_DIR/' || $HOST_SQL || '.png' AS icon_path FROM kept)
+FROM (SELECT url, disp_title, bare, t, '$ICON_DIR/' || $HOST_SQL || '.png' AS icon_path FROM final)
+-- $HOST_SQL reads `rest`, which `final` carries for that reason alone.
 ORDER BY t DESC;
 " 2>/dev/null | LC_ALL=C awk -v cap="$MAX_BYTES" '{ total += length($0) + 1; if (total > cap) exit; print }'

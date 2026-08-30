@@ -42,7 +42,7 @@ Everything worth changing in the script is in two sections at the top of `bin/tm
 | Setting | Does |
 | --- | --- |
 | `TERMINAL` | which terminal to spawn when nothing is attached |
-| `RAISE_TERMINAL` | bring the terminal to the front after switching. `0` for a tiling WM that does this for you |
+| `RAISE_TERMINAL` | bring the terminal to the front after switching. Defaults to `1` on macOS and `0` on Linux, where focusing a window is one command per compositor; set it to `1` once you have filled in the recipe for yours |
 | `ALWAYS_NEW_WINDOW` | `1` for a window per project, never reusing an attached client |
 | `UNSAFE_CHARS` | characters replaced with `_` in the session name |
 
@@ -50,7 +50,7 @@ Everything worth changing in the script is in two sections at the top of `bin/tm
 LOOK_TMUX_TERMINAL=kitty ~/.look/bin/tmux-open ~/dev/look
 ```
 
-Below them are two functions with the alternatives already written as commented lines: `spawn_terminal()` (ghostty/kitty/alacritty, wezterm, gnome-terminal, Windows Terminal) and `raise_terminal()`, which is the macOS-only part. On Linux, replace its `open -a` lines with `wmctrl -a`, or whatever your window manager uses to focus a window.
+Below them are two functions with the alternatives already written as commented lines: `spawn_terminal()` (ghostty/kitty/alacritty, wezterm, gnome-terminal, Windows Terminal) and `raise_terminal()`, which branches on the platform. Its macOS half is filled in; its Linux half is a list of commented recipes for niri, sway, Hyprland and X11, because focusing a window is the compositor's job and there is no portable command for it. Uncomment yours and set `LOOK_TMUX_RAISE=1`.
 
 **Cmd+T as well as Cmd+K.** `terminal` is one of the four verbs every row has, so declaring it on your projects block makes `Cmd+T` mean "the tmux session for this project" for those rows only, while every other row in Look still uses the terminal from `~/.look/config`:
 
@@ -58,7 +58,7 @@ Below them are two functions with the alternatives already written as commented 
 terminal = "~/.look/bin/tmux-open {path}"
 ```
 
-**In `tmux-sessions`**, `open` is written for wezterm. Swap it for your terminal: `ghostty -e tmux attach -t \={id}`, `kitty tmux attach -t \={id}`.
+**In `tmux-sessions`**, `open` is written for ghostty, matching `bin/tmux-open`'s own default. Swap it for your terminal: `wezterm start -- tmux attach -t \={id}`, `kitty tmux attach -t \={id}`.
 
 ## Two things that will bite you
 

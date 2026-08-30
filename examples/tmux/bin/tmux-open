@@ -25,8 +25,17 @@ set -euo pipefail
 TERMINAL="${LOOK_TMUX_TERMINAL:-ghostty}"
 
 # After switching an attached client, bring its terminal to the front.
-# Set to 0 if you use a tiling window manager that does this for you.
-RAISE_TERMINAL="${LOOK_TMUX_RAISE:-1}"
+#
+# Defaults to on for macOS and off everywhere else, because raise_terminal()
+# below is written with `open -a`, which only macOS has. Linux has no portable
+# "focus that window": it is one command per compositor, and most tiling WMs
+# follow the switched client on their own. Set it to 1 once you have filled in
+# the recipe for yours.
+case "$(uname -s)" in
+    Darwin) RAISE_DEFAULT=1 ;;
+    *)      RAISE_DEFAULT=0 ;;
+esac
+RAISE_TERMINAL="${LOOK_TMUX_RAISE:-$RAISE_DEFAULT}"
 
 # Always open a new terminal window, never reuse an attached one.
 # Set to 1 if you would rather have a window per project.
@@ -56,16 +65,31 @@ spawn_terminal() {
 }
 
 # Bring the terminal already showing tmux to the front. $1 is tmux's
-# termname for it, e.g. "xterm-ghostty". Add a line for your own terminal.
+# termname for it, e.g. "xterm-ghostty". Only called when RAISE_TERMINAL is 1,
+# which is the macOS default; see the note beside it above.
 raise_terminal() {
-    case "$1" in
-        *ghostty*)   open -a Ghostty ;;
-        *wezterm*)   open -a WezTerm ;;
-        *kitty*)     open -a kitty ;;
-        *alacritty*) open -a Alacritty ;;
-        # *foot*)    ...  # Linux: try wmctrl -a, or your WM's focus command
-        *)           : ;;   # unknown terminal: leave it where it is
-    esac
+    if [ "$(uname -s)" = "Darwin" ]; then
+        case "$1" in
+            *ghostty*)   open -a Ghostty ;;
+            *wezterm*)   open -a WezTerm ;;
+            *kitty*)     open -a kitty ;;
+            *alacritty*) open -a Alacritty ;;
+            *)           : ;;   # unknown terminal: leave it where it is
+        esac
+        return
+    fi
+
+    # Linux. One line per compositor rather than one per terminal, since this is
+    # the window manager's job and not the terminal's. Uncomment yours, and set
+    # LOOK_TMUX_RAISE=1. `$1` is the termname, so `${1#xterm-}` is usually the
+    # app_id / class your WM knows the window by.
+    #
+    # niri msg action focus-window --id "$(niri msg --json windows \
+    #   | jq -r ".[] | select(.app_id==\"${1#xterm-}\") | .id" | head -n1)"
+    # swaymsg "[app_id=\"${1#xterm-}\"] focus"
+    # hyprctl dispatch focuswindow "class:${1#xterm-}"
+    # wmctrl -a "${1#xterm-}"        # X11 only, needs wmctrl
+    :
 }
 
 

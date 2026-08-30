@@ -18,7 +18,11 @@ run     = """tmux list-sessions -F '{"id":"#{session_name}","title":"#{session_n
 #               already shell-quoted and a template never quotes them again
 #   ={id}    -> zsh's equals-expansion turns =look into /usr/bin/look
 #   \={id}   -> tmux gets =look, which asks it for that exact session name
-open    = "wezterm start -- tmux attach -t \\={id}"
+# ghostty, to agree with bin/tmux-open's own default. Yours instead:
+#   wezterm start -- tmux attach -t \={id}
+#   kitty tmux attach -t \={id}
+#   alacritty -e tmux attach -t \={id}
+open    = "ghostty -e tmux attach -t \\={id}"
 
 # Index, an active marker, and the name. Not the current command as well: tmux
 # renames a window after whatever runs in it, so the two columns said the same

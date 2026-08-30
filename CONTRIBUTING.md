@@ -43,11 +43,30 @@ examples/git/worktrees.toml        # NO: someone else will ship worktrees.toml
 [branches]              # NO: collides with everyone else's branches block
 ```
 
+Block **ids** are not what anyone types, though. `name` and `aliases` are, and they answer to a different rule.
+
+## The naming rule's other half: what people type
+
+An id only has to be unique inside `~/.look/sources/`. A `name` or an `alias` competes with the user's whole index: their apps, files, folders, settings and browser history. Ship a generic one and you make every one of their searches for that word worse, silently, on a machine you have never seen.
+
+```toml
+name    = "tmux sessions"                    # good: two words, both distinctive
+aliases = ["tm"]                             # good: short, means nothing else
+
+name    = "Files"                            # NO: an app on macOS and GNOME
+aliases = ["code", "git", "notes", "open"]   # NO: an editor, a directory, a folder, a verb
+```
+
+Ask what the word already means on a normal machine before you claim it. Two words are safer than one, since both reach the block and neither matches much alone. An alias earns its place only by being shorter than the name and colliding with less, so most blocks need none at all.
+
+Do not paper over a generic name with `bias`. That shifts the whole block in *every* query, including the ones the user did not have in mind, and it is their call rather than yours.
+
 This is not style, it is the only thing keeping installed examples apart. Everything lands in one flat `~/.look/sources/`, where a second `worktrees.toml` overwrites the first on copy, and where two blocks sharing an id means **only the alphabetically-first one loads** while the other is reported as a duplicate. CI enforces both.
 
 ## Checklist
 
 - [ ] Every `.toml` file name and every block id starts with the folder name.
+- [ ] `name` and `aliases` are distinctive, not words the user's apps and files already answer to.
 - [ ] No hard-coded home directory. Write `~/dev`, never `/Users/you/dev`.
 - [ ] Anything destructive declares `confirm`. Deleting, stopping, force-pushing, resetting: a launcher makes Enter on the wrong row cheap.
 - [ ] No placeholder is quoted by you. `open {path}`, never `open "{path}"`. Look shell-escapes every substitution already, so your quotes are a second layer that breaks it.
