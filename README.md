@@ -144,7 +144,7 @@ Most of them touch only what you point them at. One does not, on purpose: [brows
 
 ## Contributing
 
-Yes please. `make new NAME=tmux` scaffolds one with every rename already done. One folder per example, [the checklist is short](CONTRIBUTING.md), and CI parses every file with Look's own parser so a typo cannot reach anyone. Two things we ask beyond that: **install it and use it before you commit** (parsing is not running), and **say which platforms you actually tested on**.
+Yes please. `make new NAME=tmux` scaffolds one with every rename already done. One folder per example, [the rules are short](CONTRIBUTING.md), and CI parses every file with Look's own parser so a typo cannot reach anyone. Two things we ask beyond that: **install it and use it before you commit** (parsing is not running), and **say which platforms you actually tested on**.
 
 ## License
 

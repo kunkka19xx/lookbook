@@ -110,4 +110,4 @@ Nothing here downloads anything, and anything that changes your machine sits beh
 make new-tile NAME=my-thing
 ```
 
-It scaffolds `tiles/my-thing/` with the block and README already renamed. The [contributing checklist](../CONTRIBUTING.md) is the same as for sources, plus one thing: a tile's `value` has to finish in under two seconds on a cold machine, not just on yours.
+It scaffolds `tiles/my-thing/` with the block and README already renamed. The [contributing rules](../CONTRIBUTING.md) are the same as for sources, plus one thing: a tile's `value` has to finish in under two seconds on a cold machine, not just on yours.

@@ -356,7 +356,11 @@ while read -r dir; do
             *) fail "$file must be $name.toml or start with \"$name-\"" ;;
         esac
 
-        mapfile -t ids < <(tile_ids "$toml")
+        # A read loop, not mapfile: mapfile is bash 4, and macOS ships 3.2.
+        ids=()
+        while IFS= read -r id; do
+            ids+=("$id")
+        done < <(tile_ids "$toml")
         if [ "${#ids[@]}" -eq 0 ]; then
             fail "$file declares no [tiles.<name>] block"
             continue

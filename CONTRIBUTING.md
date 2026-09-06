@@ -35,28 +35,19 @@ sources/git/                tiles/lock/
 └── bin/                 └── lock-linux.toml
 ```
 
-Several files in one folder is the normal case. For a source they are independent, and a user can copy one, the other, or both. For a tile they are usually **alternatives**: `lock-macos.toml` and `lock-linux.toml` declare the same `[tiles.lock]` for two systems, and a user takes one. The checker reads each tile file on its own for exactly that reason.
+Several files in one folder is the normal case. For a source they are independent, and a user can copy one, the other, or both. For a tile they are usually **alternatives**: `lock-macos.toml` and `lock-linux.toml` declare the same `[tiles.lock]` for two systems, and a user takes one.
 
 ## The naming rule
 
-**Every file name and every block id starts with the folder name.**
-
-```
-sources/git/git-branches.toml     # good
-sources/git/worktrees.toml        # NO: someone else will ship worktrees.toml
-```
+**Every file name and every block id starts with the folder name.** Everything lands in one flat `~/.look/sources/`, where a second `worktrees.toml` overwrites the first on copy, and where two blocks sharing an id means only the alphabetically-first one loads.
 
 ```toml
+# sources/git/git-branches.toml, not sources/git/worktrees.toml
 [git-branches]          # good
-[git-branches-delete]   # good
 [branches]              # NO: collides with everyone else's branches block
 ```
 
-Block **ids** are not what anyone types, though. `name` and `aliases` are, and they answer to a different rule.
-
-## The naming rule's other half: what people type
-
-An id only has to be unique inside `~/.look/sources/`. A `name` or an `alias` competes with the user's whole index: their apps, files, folders, settings and browser history. Ship a generic one and you make every one of their searches for that word worse, silently, on a machine you have never seen.
+Block **ids** are not what anyone types, though. A `name` or an `alias` competes with the user's whole index: their apps, files, folders, settings and browser history. Ship a generic one and you make every one of their searches for that word worse, silently, on a machine you have never seen.
 
 ```toml
 name    = "tmux sessions"                    # good: two words, both distinctive
@@ -66,34 +57,22 @@ name    = "Files"                            # NO: an app on macOS and GNOME
 aliases = ["code", "git", "notes", "open"]   # NO: an editor, a directory, a folder, a verb
 ```
 
-Ask what the word already means on a normal machine before you claim it. Two words are safer than one, since both reach the block and neither matches much alone. An alias earns its place only by being shorter than the name and colliding with less, so most blocks need none at all.
+Ask what the word already means on a normal machine before you claim it. Most blocks need no alias at all. Do not paper over a generic name with `bias` either: that shifts the whole block in *every* query, and it is the user's call rather than yours.
 
-Do not paper over a generic name with `bias`. That shifts the whole block in *every* query, including the ones the user did not have in mind, and it is their call rather than yours.
+This is the one rule CI enforces on both halves, because it is the only thing keeping installed examples apart.
 
-This is not style, it is the only thing keeping installed examples apart. Everything lands in one flat `~/.look/sources/`, where a second `worktrees.toml` overwrites the first on copy, and where two blocks sharing an id means **only the alphabetically-first one loads** while the other is reported as a duplicate. CI enforces both.
+## Write it so Enter is safe
 
-## Checklist
+The rest is judgement, not a form to fill in. The things that actually bite:
 
-- [ ] Every `.toml` file name and every block id starts with the folder name.
-- [ ] `name` and `aliases` are distinctive, not words the user's apps and files already answer to.
-- [ ] No hard-coded home directory. Write `~/dev`, never `/Users/you/dev`.
-- [ ] Anything destructive declares `confirm`. Deleting, stopping, force-pushing, resetting: a launcher makes Enter on the wrong row cheap.
-- [ ] No placeholder is quoted by you. `open {path}`, never `open "{path}"`. Look shell-escapes every substitution already, so your quotes are a second layer that breaks it.
-- [ ] Nothing downloads and runs code (`curl ... | sh`), and nothing writes outside what the example is about.
-- [ ] The README has a **Platforms** line naming every OS you actually ran it on. See below.
-- [ ] The README says what has to be installed (`git`, `jq`, `docker`).
-- [ ] Commands that only work on one OS are labelled. `open -a` is macOS, `xdg-open` is Linux, `start` is Windows.
-- [ ] **You installed it and used it**, not just parsed it. See below.
-- [ ] A `bin/` script is executable, has a shebang, and the README says where to put it.
-- [ ] A demo GIF or screenshot is **linked**, not committed. [See below](#link-a-gif-do-not-commit-it).
-- [ ] No metadata table in the `.toml`. Every top-level table is a block, so a `[_meta]` fails to parse. Put context in the README or in `#` comments.
+- **Anything destructive declares `confirm`.** Deleting, stopping, force-pushing, resetting: a launcher makes Enter on the wrong row cheap. And `confirm` should read "Delete branch main?", not "Delete branch {id}?".
+- **Do not quote placeholders.** `open {path}`, never `open "{path}"`. Look shell-escapes every substitution already, so your quotes are a second layer that breaks it.
+- **No hard-coded home directory**, nothing that downloads and runs code, nothing that writes outside what the example is about.
+- **Label commands only one OS understands.** `open -a` is macOS, `xdg-open` is Linux, `start` is Windows.
+- **No metadata table in the `.toml`.** Every top-level table is a block, so a `[_meta]` fails to parse. Put context in the README or in `#` comments.
+- **A `bin/` script** needs a shebang, the executable bit, and a README line saying where to put it.
 
-Four more for a **tile**:
-
-- [ ] Its `value` command finishes in **under two seconds on a cold machine**, not just on yours. Past that it is killed along with anything it started, and the tile keeps its last good reading.
-- [ ] It declares no `layout`. The drawing belongs to the user's file; ship the `[tiles.<name>]` block alone.
-- [ ] The README says it is **merged** into `~/.look/super-actions.toml`, and shows the `layout` line to change. No `cp` install line: copying over that file takes the user's whole strip with it.
-- [ ] `icon` is labelled per platform. An SF Symbol name means nothing on Linux, an image path means nothing on Windows, and an unrecognised name draws nothing at all rather than a placeholder.
+For a **tile**, three more. Its `value` command has to finish in **under two seconds on a cold machine**, not just on yours; past that it is killed and the tile keeps its last good reading. It declares no `layout` — the drawing belongs to the user's file, so ship the `[tiles.<name>]` block alone. And `icon` is labelled per platform, since an SF Symbol name means nothing on Linux and an unrecognised name draws nothing at all.
 
 ## Say which platforms it works on
 
@@ -103,15 +82,13 @@ Every example README needs this line, and the checker fails without it:
 **Platforms.** macOS, Linux, Windows
 ```
 
-Name **only the ones you actually ran it on.** Not the ones you assume it works on, and not "should work anywhere". Someone on Windows reading "macOS, Linux" knows to expect work; reading "macOS, Linux, Windows" from a guess wastes their evening.
-
-Say it plainly when support is partial, which is the normal case:
+Name **only the ones you actually ran it on** — not the ones you assume, and not "should work anywhere". Say it plainly when support is partial, which is the normal case:
 
 ```markdown
 **Platforms.** macOS as written, Linux with a one-line change to `open`. Untested on Windows.
 ```
 
-This matters more here than in most repos, because the commands are the example. `open -a Ghostty`, `xdg-open`, and `start ""` are three different things, and a launcher command that silently does nothing is hard to debug from the outside. If you cannot test an OS, say so and let someone who has one send the variant.
+This matters more here than in most repos, because the commands are the example. Someone on Windows reading "macOS, Linux" knows to expect work; reading "macOS, Linux, Windows" from a guess wastes their evening. If you cannot test an OS, say so and let someone who has one send the variant.
 
 ## Link a GIF, do not commit it
 
@@ -123,39 +100,20 @@ A GIF of your example in use is welcome. Put it somewhere else and link it:
 
 The easy way to get such a URL is to drag the file into a GitHub issue, pull request, or release. GitHub uploads it and hands back a permanent link, and no `media/` folder is needed.
 
-Committing it instead is a decision nobody can undo. Git keeps every version of a binary forever and cannot delta-compress one, so a 5 MB recording is 5 MB in every clone of this repo from now on, and re-recording it twice makes that 15 MB. What is being shared here is a handful of small text files people copy; a demo of them should not outweigh them.
+Committing it instead is a decision nobody can undo. Git keeps every version of a binary forever and cannot delta-compress one, so a 5 MB recording is 5 MB in every clone of this repo from now on. What is being shared here is a handful of small text files people copy; a demo of them should not outweigh them.
 
 ## Test it in Look before you commit
 
-`make check` proves your file **parses**. It cannot prove your commands **work**: it never runs them. A block can be perfectly valid TOML and still open the wrong thing, or nothing at all.
-
-So install it for real first:
+`make check` proves your file **parses**. It cannot prove your commands **work**: it never runs them. A block can be perfectly valid TOML and still open the wrong thing, or nothing at all. So install it for real first:
 
 ```bash
-make install NAME=my-thing
+make install NAME=my-thing    # a source
+make show NAME=my-tile        # a tile: paste it in, add the name to your layout
 ```
 
-Reload with `Cmd+Shift+;` (macOS) or `Ctrl+Shift+;` (Linux, Windows), then walk the list:
+Reload with `Cmd+Shift+;` (macOS) or `Ctrl+Shift+;` (Linux, Windows), then actually use it. The rows appear and typing the name finds them; Enter does the right thing, including on a row whose name has a space or a quote in it; `preview` fills the panel; every `then` target works from `Cmd+K`. For a tile: it is drawn in the cell and at the size you gave it, its reading is still right after the `refresh` window lapses, press does what it says, and its letter works.
 
-- [ ] **The rows appear**, and typing the name you gave finds them.
-- [ ] **Enter does the right thing** on a row, and on a row whose name has a space or a quote in it.
-- [ ] **`preview` fills the panel**, if you declared one.
-- [ ] **Every `then` target works** from `Cmd+K`, including the drill-downs.
-- [ ] **`confirm` names the right row.** The question is expanded, so it should read "Delete branch main?", not "Delete branch {id}?".
-- [ ] **The failure mode is not silent.** Rename the tool it depends on, reload, and check that you get something readable instead of an empty list.
-
-A **tile** is merged rather than installed, so the walk is its own:
-
-```bash
-make show NAME=my-tile    # then paste it in, and add the name to your layout
-```
-
-- [ ] **The tile is drawn**, in the cell you drew it in, at the size you gave it.
-- [ ] **What it shows is right**, and still right after its `refresh` window lapses.
-- [ ] **Press does what it says**, and `confirm` arms on the first press and fires on the second.
-- [ ] **Its letter works**, or is legitimately taken by a built-in on your strip.
-- [ ] **The failure mode is not silent.** Rename the tool it depends on and reload: the tile should keep its last reading and say what happened, never blank the strip.
-- [ ] **It behaves when there is nothing to report.** A tile whose `value` prints nothing is not drawn, which is usually what you want; check it is not printing an empty box instead.
+Then break it on purpose. Rename the tool it depends on, reload, and check that **the failure mode is not silent** — a readable message rather than an empty list, and a tile that keeps its last reading rather than blanking the strip. This is the one that catches most examples.
 
 Two things to know while you are testing:
 
@@ -168,7 +126,7 @@ Short. [`template/source-README.md`](template/source-README.md) and [`template/t
 
 - **A sentence or two** at the top saying what you get.
 - **Requires** and **Platforms** lines.
-- **Install**: for a source, the `cp` line plus anything extra (a `bin/` script, a `then` line to add elsewhere). For a tile, the `layout` line to change and the block to paste.
+- **Install**: for a source, the `cp` line plus anything extra (a `bin/` script, a `then` line to add elsewhere). For a tile, the `layout` line to change and the block to paste — no `cp`, since copying over that file takes the user's whole strip with it.
 - **Blocks** (or **The tile**): a table of id, what it shows, what Enter or a press does.
 - **Customise**: the two or three lines people will want to change first.
 
@@ -181,7 +139,7 @@ make check                # everything
 make check NAME=tmux      # just the one you are working on
 ```
 
-It borrows Look's own parsers, `look-sources` for `sources/` and the launchpad resolver for `tiles/`, built from a checkout **pinned to Look's latest release tag**, so it catches exactly what Look would: unknown keys, a block with no producer, a dangling `then`, a duplicate id, a bad glob. Then it reads the checklist above back to you: a hard-coded home directory, a placeholder you quoted, a `curl` into a shell, a missing **Requires** or **Platforms** line, a block your README never mentions, an install line naming somebody else's folder, the `TODO` row `make new` left in the index, a committed GIF. For a tile it also synthesizes a `layout` naming everything the file declares, so a tile that parses but cannot be placed, drawn under its minimum size or asking for a letter nothing can grant, fails here rather than on someone's strip. The same script runs in CI.
+It borrows Look's own parsers, built from a checkout **pinned to Look's latest release tag**, so it catches exactly what Look would: unknown keys, a block with no producer, a dangling `then`, a duplicate id, a bad glob. Then it re-reads the rules above back to you — a hard-coded home directory, a quoted placeholder, a `curl` into a shell, a missing **Requires** or **Platforms** line, a block your README never mentions, the `TODO` row `make new` left in the index, a committed GIF. For a tile it also synthesizes a `layout` naming everything the file declares, so a tile that parses but cannot be placed fails here rather than on someone's strip. The same script runs in CI.
 
 Because the pin is a release and not `main`, a key that has not shipped yet fails here by name, which is how the **Requires** line in your README stays true. Writing an example for something unreleased is the one case to override it:
 
@@ -189,6 +147,6 @@ Because the pin is a release and not `main`, a key that has not shipped yet fail
 LOOK_REF=main make check
 ```
 
-Two boxes it cannot tick, and they are the two that catch the most: **that you installed it and used it**, and **that a command only one OS understands is labelled as such**. Neither is decidable from the text, so both stay yours.
+Two things it can never check, and they are the two that catch the most: **that you installed it and used it**, and **that a command only one OS understands is labelled as such**. Neither is decidable from the text, so both stay yours.
 
 It is the floor, not the bar. It reads your file; it never runs your commands. The [walkthrough above](#test-it-in-look-before-you-commit) is the part that catches a source that parses beautifully and does nothing.
