@@ -23,18 +23,22 @@ New to either? The [sources format guide](https://github.com/kunkka19xx/look/blo
 One block, one producer key, rows in the launcher. That is the whole model:
 
 ```mermaid
-flowchart TD
-    F["your-source.toml"] -->|reload| L["every .toml in ~/.look/sources/"]
-    L --> B1["do: the block is the row"]
-    L --> B2["dir: rows are real folders"]
-    L --> B3["file: rows are lines you keep"]
-    L --> B4["run: rows are what a command printed"]
-    B1 --> S["rows in Look, ranked by use"]
-    B2 -->|"carries a path"| S
-    B3 -->|"text only"| S
-    B4 -->|"text only"| S
-    S -->|Enter| A["open = ... runs, else the row's path,<br/>else the do steps"]
-    S -->|"Cmd / Ctrl + K"| T["then = [...]: drill down, or act on the row"]
+flowchart LR
+    F["your-source.toml"] -->|reload| L["every .toml in<br/>~/.look/sources/"]
+    L --> P
+
+    subgraph P["each block declares exactly one producer"]
+        direction TB
+        B1["<b>do</b><br/>the block is the row"]
+        B2["<b>dir</b><br/>one row per child"]
+        B3["<b>file</b><br/>one row per line"]
+        B4["<b>run</b><br/>one row per line printed"]
+        B1 ~~~ B2 ~~~ B3 ~~~ B4
+    end
+
+    P --> S["rows in Look,<br/>ranked by use"]
+    S -->|Enter| A["<b>open</b> runs, else the row's path,<br/>else the do steps"]
+    S -->|"Cmd / Ctrl + K"| T["<b>then</b> drills down,<br/>or acts on the row"]
 ```
 
 Four things the picture leaves out:
