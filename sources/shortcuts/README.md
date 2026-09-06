@@ -27,7 +27,7 @@ Reload with `Cmd+Shift+;`.
 
 ## Running one tells you nothing
 
-`shortcuts run` prints nothing, opens no window, and returns as soon as the shortcut is handed off. A shortcut that shows you something shows it itself: a notification, an app it opens, a file it writes. One that does not — a shortcut that flips a HomeKit switch, say — is indistinguishable from a shortcut that failed.
+`shortcuts run` prints nothing, opens no window, and returns as soon as the shortcut is handed off. A shortcut that shows you something shows it itself: a notification, an app it opens, a file it writes. One that does not, a shortcut that flips a HomeKit switch, say, is indistinguishable from a shortcut that failed.
 
 That is the CLI's behaviour and not something a source can fix, but two things help while you are setting one up:
 

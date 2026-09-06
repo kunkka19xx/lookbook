@@ -18,7 +18,7 @@ cp sources/images/*.toml ~/.look/sources/
 
 Reload with `Cmd+Shift+;` (macOS) or `Ctrl+Shift+;` (Linux, Windows).
 
-Nothing new appears in the launcher, which is correct: `applies` blocks are verbs, not lists. Select a `.png` and press `Cmd+K` to see them. **Delete the blocks whose tool you do not have** — an action whose command is missing is listed like any other and fails when you press it.
+Nothing new appears in the launcher, which is correct: `applies` blocks are verbs, not lists. Select a `.png` and press `Cmd+K` to see them. **Delete the blocks whose tool you do not have.** An action whose command is missing is listed like any other, and fails when you press it.
 
 ## Blocks
 
@@ -50,7 +50,7 @@ Add `confirm = "..."` to any of them and the verb asks before it runs. Anything 
 p={path}; cwebp -quiet -q 82 "$p" -o "${p%.*}.webp"
 ```
 
-Every step is shell text run by your login shell, so `${p%.*}` — strip the shortest match of `.*` from the end — is the shell's parameter expansion and not something Look provides. Assigning `{path}` to `p` first is what makes it available: the placeholder is substituted as one shell-escaped word, and you cannot expand inside it.
+Every step is shell text run by your login shell, so `${p%.*}`, which strips the shortest match of `.*` from the end, is the shell's parameter expansion and not something Look provides. Assigning `{path}` to `p` first is what makes it available: the placeholder is substituted as one shell-escaped word, and you cannot expand inside it.
 
 The same trick covers any "same name, different extension" output.
 

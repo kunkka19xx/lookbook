@@ -12,12 +12,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Look's own parser is the only correct judge of this format, so CI
-      # borrows it rather than reimplementing the rules here.
-      - uses: actions/checkout@v4
-        with:
-          repository: kunkka19xx/look
-          path: .look-src
+      # Look's own parsers are the only correct judge of these formats, so CI
+      # borrows them rather than reimplementing the rules here.
+      #
+      # The checkout is made by check.sh, not by an actions/checkout step: the
+      # script pins it to Look's latest RELEASE tag, which is the version an
+      # example's README tells its reader to install. Checking out main here
+      # instead would quietly test the examples against unreleased code.
+      #
+      # It runs before the cargo cache so the cache has a workspace to key on.
+      - name: Check out the pinned Look
+        run: ./scripts/check.sh --clone-only
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -25,8 +30,6 @@ jobs:
         with:
           workspaces: .look-src/core
 
-      # make check builds two parsers out of the look checkout above:
-      # look-sources' parse_check for sources/, and look-engine's
-      # launchpad_check for tiles/. The second landed with Super Actions
-      # tiles, so a look checkout predating that will fail to build it.
+      # Builds two parsers out of the checkout above: look-sources' parse_check
+      # for sources/, and look-engine's launchpad_check for tiles/.
       - run: make check

@@ -53,7 +53,7 @@ run = "LOOK_HISTORY_BROWSERS=firefox ~/.look/bin/browser-history-rows"
 | `LOOK_HISTORY_MAX_DB` | `10` | Profile databases to attach. SQLite is built with `MAX_ATTACHED=10` |
 
 - **`open` covers both platforms already.** The line is `command -v xdg-open ... && xdg-open {id} || open {id}`, because only one of those two commands exists on any given machine. On Windows, replace the whole thing with `start "" {id}`.
-- **Profile paths follow `uname`.** On Linux the script reads `~/.mozilla/firefox`, `~/.config/<browser>` and the Snap and Flatpak locations; on macOS, the vendor directories under `~/Library/Application Support`. Both lists are in `bases_of()`, which is also where a browser it does not know goes — add the name to `engine_of()` beside it, saying which engine it uses.
+- **Profile paths follow `uname`.** On Linux the script reads `~/.mozilla/firefox`, `~/.config/<browser>` and the Snap and Flatpak locations; on macOS, the vendor directories under `~/Library/Application Support`. Both lists are in `bases_of()`, which is also where a browser it does not know goes, add the name to `engine_of()` beside it, saying which engine it uses.
 - **Chromium's Guest and System profiles are skipped.** They exist on every install, hold nothing you have browsed, and would each spend one of the ten ATTACH slots.
 
 **Narrowing browsers reaches further back.** The row and byte budgets are shared across everything merged, so `auto` spends them on whatever is most recent across all your browsers. On the machine this was written for, `auto` reached back twelve days while `LOOK_HISTORY_BROWSERS=brave` alone reached three months. If a browser you care about keeps falling off the end, name it on its own.

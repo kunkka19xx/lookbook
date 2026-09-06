@@ -35,7 +35,7 @@ sources/git/                tiles/lock/
 └── bin/                 └── lock-linux.toml
 ```
 
-Several files in one folder is the normal case. For a source they are independent, and a user can copy one, the other, or both. For a tile they are usually **alternatives** — `lock-macos.toml` and `lock-linux.toml` declare the same `[tiles.lock]` for two systems, and a user takes one. The checker reads each tile file on its own for exactly that reason.
+Several files in one folder is the normal case. For a source they are independent, and a user can copy one, the other, or both. For a tile they are usually **alternatives**: `lock-macos.toml` and `lock-linux.toml` declare the same `[tiles.lock]` for two systems, and a user takes one. The checker reads each tile file on its own for exactly that reason.
 
 ## The naming rule
 
@@ -181,7 +181,13 @@ make check                # everything
 make check NAME=tmux      # just the one you are working on
 ```
 
-It borrows Look's own parsers — `look-sources` for `sources/`, the launchpad resolver for `tiles/` — so it catches exactly what Look would: unknown keys, a block with no producer, a dangling `then`, a duplicate id, a bad glob. Then it reads the checklist above back to you: a hard-coded home directory, a placeholder you quoted, a `curl` into a shell, a missing **Requires** or **Platforms** line, a block your README never mentions, an install line naming somebody else's folder, the `TODO` row `make new` left in the index, a committed GIF. For a tile it also synthesizes a `layout` naming everything the file declares, so a tile that parses but cannot be placed — drawn under its minimum size, asking for a letter nothing can grant — fails here rather than on someone's strip. The same script runs in CI.
+It borrows Look's own parsers, `look-sources` for `sources/` and the launchpad resolver for `tiles/`, built from a checkout **pinned to Look's latest release tag**, so it catches exactly what Look would: unknown keys, a block with no producer, a dangling `then`, a duplicate id, a bad glob. Then it reads the checklist above back to you: a hard-coded home directory, a placeholder you quoted, a `curl` into a shell, a missing **Requires** or **Platforms** line, a block your README never mentions, an install line naming somebody else's folder, the `TODO` row `make new` left in the index, a committed GIF. For a tile it also synthesizes a `layout` naming everything the file declares, so a tile that parses but cannot be placed, drawn under its minimum size or asking for a letter nothing can grant, fails here rather than on someone's strip. The same script runs in CI.
+
+Because the pin is a release and not `main`, a key that has not shipped yet fails here by name, which is how the **Requires** line in your README stays true. Writing an example for something unreleased is the one case to override it:
+
+```bash
+LOOK_REF=main make check
+```
 
 Two boxes it cannot tick, and they are the two that catch the most: **that you installed it and used it**, and **that a command only one OS understands is labelled as such**. Neither is decidable from the text, so both stay yours.
 

@@ -44,7 +44,7 @@ id <TAB> title <TAB> subtitle
 - The **title** is what you read and what you search. **Only the title is matched**, so write the words you will actually type.
 - The **subtitle** is the grey line under it. Optional.
 - A line with **no tabs** is a row whose id and title are the same text, which is all a bare URL needs.
-- Blank lines are skipped. **There are no comments** — every non-blank line is a row, so a `#` line appears as one. Keep notes in the subtitle instead.
+- Blank lines are skipped. **There are no comments.** Every non-blank line is a row, so a `#` line appears as one. Keep notes in the subtitle instead.
 
 ## Customise
 
@@ -65,4 +65,4 @@ EOF
 chmod +x ~/.look/sources/repos
 ```
 
-That is the fastest way to try an idea. Everything else is a default, so when it needs an `open`, a `preview` or a `then`, write a block that names the script in `run` — the way [docker](../docker) and [browser-history](../browser-history) do. On Windows the executable bit does not exist, so the extension decides: `.exe`, `.cmd`, `.bat`, `.com` and `.ps1` count.
+That is the fastest way to try an idea. Everything else is a default, so when it needs an `open`, a `preview` or a `then`, write a block that names the script in `run`, the way [docker](../docker) and [browser-history](../browser-history) do. On Windows the executable bit does not exist, so the extension decides: `.exe`, `.cmd`, `.bat`, `.com` and `.ps1` count.

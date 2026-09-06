@@ -11,7 +11,12 @@
 # Two kinds, two parsers, because they are two formats read by two different
 # parts of Look: sources/ by look-sources, tiles/ by look-engine's launchpad.
 #
-# Set either to an already-built binary to skip the build:
+# Both are built from a checkout pinned to Look's latest RELEASE tag, so an
+# example is judged against the version its README tells the reader to install.
+# LOOK_REF overrides the pin (`LOOK_REF=main` while writing for an unreleased
+# feature), and an existing checkout is reused as-is.
+#
+# Set either parser to an already-built binary to skip the clone and build:
 #   PARSER=../look/core/target/debug/examples/parse_check ./scripts/check.sh
 #   TILE_PARSER=../look/core/target/debug/examples/launchpad_check ./scripts/check.sh
 #
@@ -24,6 +29,16 @@ set -euo pipefail
 
 readonly LOOK_REPO="https://github.com/kunkka19xx/look"
 readonly LOOK_CHECKOUT="${LOOK_CHECKOUT:-.look-src}"
+
+# Which Look the examples are checked against. The latest RELEASE, not main:
+# every example here claims a minimum version in its README, and the thing that
+# claim has to hold against is the Look a reader can actually install. Checking
+# against main would green-light an example using a key that has not shipped.
+#
+# LOOK_REF overrides it. `LOOK_REF=main` is the one to reach for while writing
+# an example for an unreleased feature, and it is what the release process
+# wants between a feature landing and the tag going out.
+LOOK_REF="${LOOK_REF:-}"
 readonly SOURCES_DIR="sources"
 readonly TILES_DIR="tiles"
 readonly INDEX="README.md"
@@ -75,12 +90,58 @@ readonly WHOLE_VALUE_RE="(=[[:space:]]*\\[?|:[0-9]+:)[[:space:]]*[\"']\\{${PLACE
 # \b rather than whitespace-or-end: in a .toml the command ends at a quote.
 readonly PIPE_TO_SHELL_RE='(curl|wget)[^|]*\|[[:space:]]*(sudo[[:space:]]+)?(sh|bash|zsh|python[0-9.]*)\b'
 
+# The newest vX.Y.Z tag. Strict, because the tag list is not: it also holds a
+# typo'd `v.0.6.10` and GitHub's `untagged-<hash>` drafts, and picking either
+# would check the examples against something nobody is running.
+latest_release_tag() {
+    git ls-remote --tags --refs "$LOOK_REPO" |
+        sed 's#.*refs/tags/##' |
+        grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' |
+        sort -V |
+        tail -1
+}
+
+# Clones the pinned ref once, and reuses whatever is already there. An existing
+# checkout is left alone rather than re-pointed: it is usually somebody's own
+# sibling clone, and moving their HEAD would be rude. Its ref is printed so a
+# stale one is visible rather than silent.
+ensure_checkout() {
+    if [ -d "$LOOK_CHECKOUT" ]; then
+        printf 'Using existing %s (%s)\n' "$LOOK_CHECKOUT" \
+            "$(git -C "$LOOK_CHECKOUT" describe --tags --always 2>/dev/null || echo 'unknown ref')" >&2
+        return
+    fi
+
+    if [ -z "$LOOK_REF" ]; then
+        LOOK_REF="$(latest_release_tag)"
+        if [ -z "$LOOK_REF" ]; then
+            echo "could not resolve the latest look release tag; set LOOK_REF" >&2
+            return 1
+        fi
+    fi
+
+    printf 'Cloning look at %s\n' "$LOOK_REF" >&2
+    # A tag is a detached HEAD and git says so at length. Nothing here ever
+    # commits into the checkout, so the advice is only noise in a CI log.
+    git -c advice.detachedHead=false clone --depth 1 --branch "$LOOK_REF" \
+        "$LOOK_REPO" "$LOOK_CHECKOUT" >&2
+}
+
 failures=0
 
 fail() {
     printf '  FAIL  %s\n' "$1"
     failures=$((failures + 1))
 }
+
+# CI materialises the checkout in a step of its own, before the cargo cache is
+# restored, so the cache has a workspace to key on. It asks for it here rather
+# than checking look out itself, so the pinned ref is decided in one place and
+# the workflow cannot drift away from what a local run uses.
+if [ "${1:-}" = "--clone-only" ]; then
+    ensure_checkout
+    exit
+fi
 
 # One example, or all of them. The repo-wide checks (the template, every example
 # installed together, the index table) run either way: they are invariants of
@@ -119,9 +180,7 @@ resolve_parser() {
         printf '%s' "$PARSER"
         return
     fi
-    if [ ! -d "$LOOK_CHECKOUT" ]; then
-        git clone --depth 1 "$LOOK_REPO" "$LOOK_CHECKOUT" >&2
-    fi
+    ensure_checkout || return 1
     cargo build --manifest-path "$LOOK_CHECKOUT/core/Cargo.toml" \
         -p look-sources --example parse_check >&2
     printf '%s' "$LOOK_CHECKOUT/core/target/debug/examples/parse_check"
@@ -130,33 +189,57 @@ resolve_parser() {
 # The tile parser, same story. `resolve` never fails - a drawing it cannot
 # trust falls back to the built-in grid - so it reports everything as a warning,
 # printed `problem:` to match parse_check.
+#
+# `launchpad_check` arrived with Super Actions tiles, later than `parse_check`,
+# so a look checkout from before that has no such target. Say which one is
+# missing and how to fix it: the cargo error on its own reads like this repo is
+# broken, when what happened is that the checkout is older than the feature.
 resolve_tile_parser() {
     if [ -n "${TILE_PARSER:-}" ]; then
         printf '%s' "$TILE_PARSER"
         return
     fi
-    if [ ! -d "$LOOK_CHECKOUT" ]; then
-        git clone --depth 1 "$LOOK_REPO" "$LOOK_CHECKOUT" >&2
+    ensure_checkout || return 1
+    if ! cargo build --manifest-path "$LOOK_CHECKOUT/core/Cargo.toml" \
+        -p look-engine --example launchpad_check >&2; then
+        cat >&2 <<EOF
+
+Could not build launchpad_check from $LOOK_CHECKOUT.
+
+tiles/ is checked with look-engine's launchpad resolver, which ships as
+core/engine/examples/launchpad_check.rs. A look checkout predating Super
+Actions tiles does not have it. Update $LOOK_CHECKOUT, or point TILE_PARSER at
+a binary you already built:
+
+  TILE_PARSER=../look/core/target/debug/examples/launchpad_check ./scripts/check.sh
+
+EOF
+        return 1
     fi
-    cargo build --manifest-path "$LOOK_CHECKOUT/core/Cargo.toml" \
-        -p look-engine --example launchpad_check >&2
     printf '%s' "$LOOK_CHECKOUT/core/target/debug/examples/launchpad_check"
 }
 
-parser="$(resolve_parser)"
+parser="$(resolve_parser)" || exit 1
 if [ ! -x "$parser" ]; then
     echo "no parser at $parser" >&2
     exit 1
 fi
 
-tile_parser="$(resolve_tile_parser)"
-if [ ! -x "$tile_parser" ]; then
-    echo "no tile parser at $tile_parser" >&2
-    exit 1
+echo "Checking sources with $parser"
+
+# Resolved only when there is a tile to check. Checking one source example
+# should not need a look checkout new enough to have the tile parser in it, and
+# neither should a fork that ships no tiles at all.
+tile_parser=""
+if [ -n "$(tiles)" ]; then
+    tile_parser="$(resolve_tile_parser)" || exit 1
+    if [ ! -x "$tile_parser" ]; then
+        echo "no tile parser at $tile_parser" >&2
+        exit 1
+    fi
+    echo "Checking tiles with $tile_parser"
 fi
 
-echo "Checking sources with $parser"
-echo "Checking tiles with $tile_parser"
 echo
 
 # 1. Every example parses on its own, and owns every id it declares.
@@ -204,6 +287,17 @@ while read -r dir; do
         fail "$name does not parse cleanly"
         continue
     fi
+
+    # A key the pinned Look does not know. It is not a parse error - the block
+    # loads and the key is ignored - which is exactly why it needs saying: an
+    # example built on an unreleased key would otherwise pass here and do
+    # nothing at all on the version its README tells the reader to install.
+    while read -r line; do
+        [ -n "$line" ] || continue
+        block="$(printf '%s' "$line" | awk '{print $2}')"
+        keys="$(printf '%s' "$line" | sed -n 's/.*unknown=\[\(.*\)\]$/\1/p')"
+        fail "[$block] uses $keys, which the Look this was checked against does not know"
+    done < <(printf '%s\n' "$output" | grep -v 'unknown=\[\]' | grep '^block ' || true)
 
     # Kept for the README check further down, so the parser runs once per example.
     printf '%s\n' "$output" | awk '/^block /{print $2}' > "$WORK_DIR/ids-$SOURCES_DIR-$name"
@@ -332,18 +426,22 @@ else
         "$(printf '%s\n' "$template_output" | grep -c '^block ' || true)"
 fi
 
-tile_template="$WORK_DIR/tile-template.toml"
-{
-    printf 'layout = ["%s"]\n\n' "$(tile_ids template/tile.toml | tr '\n' ' ')"
-    cat template/tile.toml
-} > "$tile_template"
-tile_template_output="$("$tile_parser" "$tile_template")"
-if printf '%s\n' "$tile_template_output" | grep -q '^problem:'; then
-    printf '%s\n' "$tile_template_output" | grep '^problem:' | sed 's/^/  /'
-    fail "template/tile.toml does not resolve"
-else
-    printf '  ok    tile.toml, %s tile(s)\n' \
-        "$(printf '%s\n' "$tile_template_output" | grep -c '^tile ' || true)"
+# Skipped along with the tiles themselves when the run has none to check: the
+# tile parser is only resolved when something needs it.
+if [ -n "$tile_parser" ]; then
+    tile_template="$WORK_DIR/tile-template.toml"
+    {
+        printf 'layout = ["%s"]\n\n' "$(tile_ids template/tile.toml | tr '\n' ' ')"
+        cat template/tile.toml
+    } > "$tile_template"
+    tile_template_output="$("$tile_parser" "$tile_template")"
+    if printf '%s\n' "$tile_template_output" | grep -q '^problem:'; then
+        printf '%s\n' "$tile_template_output" | grep '^problem:' | sed 's/^/  /'
+        fail "template/tile.toml does not resolve"
+    else
+        printf '  ok    tile.toml, %s tile(s)\n' \
+            "$(printf '%s\n' "$tile_template_output" | grep -c '^tile ' || true)"
+    fi
 fi
 
 echo
