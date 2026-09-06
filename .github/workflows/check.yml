@@ -10,7 +10,7 @@ jobs:
     name: examples parse
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Look's own parsers are the only correct judge of these formats, so CI
       # borrows them rather than reimplementing the rules here.
