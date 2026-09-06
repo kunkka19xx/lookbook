@@ -3,13 +3,17 @@
 # what Look actually accepts. Reimplementing the format here would only teach us
 # what a second parser thinks.
 #
-#   ./scripts/check.sh              every example
-#   ./scripts/check.sh tmux         just examples/tmux
+#   ./scripts/check.sh              every example, sources and tiles
+#   ./scripts/check.sh tmux         just that one, whichever kind it is
 #
 # Needs bash, not sh: an example folder may hold several .toml files.
 #
-# Set PARSER to an already-built parse_check to skip the build:
+# Two kinds, two parsers, because they are two formats read by two different
+# parts of Look: sources/ by look-sources, tiles/ by look-engine's launchpad.
+#
+# Set either to an already-built binary to skip the build:
 #   PARSER=../look/core/target/debug/examples/parse_check ./scripts/check.sh
+#   TILE_PARSER=../look/core/target/debug/examples/launchpad_check ./scripts/check.sh
 #
 # This covers every line of CONTRIBUTING's checklist except the two that need a
 # human: that you installed the example and used it, and that a command only one
@@ -20,7 +24,8 @@ set -euo pipefail
 
 readonly LOOK_REPO="https://github.com/kunkka19xx/look"
 readonly LOOK_CHECKOUT="${LOOK_CHECKOUT:-.look-src}"
-readonly EXAMPLES_DIR="examples"
+readonly SOURCES_DIR="sources"
+readonly TILES_DIR="tiles"
 readonly INDEX="README.md"
 # Assigned before it is made readonly, so a failing mktemp is caught by `set -e`
 # rather than masked by readonly's own exit status.
@@ -36,7 +41,7 @@ readonly MAX_FILE_BYTES=65536
 # Git keeps every version of a binary forever, so deleting the file now would
 # not shrink a single existing clone; the exception goes away when the GIF is
 # re-hosted somewhere else and the README links it from there.
-readonly GRANDFATHERED="examples/tmux/open-in-tmux.gif"
+readonly GRANDFATHERED="sources/tmux/open-in-tmux.gif"
 
 # CONTRIBUTING: "No hard-coded home directory. Write ~/dev, never /Users/you."
 readonly HOME_DIR_RE='/Users/|/home/[a-z]|[Cc]:\\+[Uu]sers'
@@ -82,17 +87,30 @@ fail() {
 # the whole directory rather than of any one example, and they cost one parse
 # between them.
 only="${1:-}"
-if [ -n "$only" ] && [ ! -d "$EXAMPLES_DIR/$only" ]; then
-    echo "no $EXAMPLES_DIR/$only (make list)" >&2
+if [ -n "$only" ] && [ ! -d "$SOURCES_DIR/$only" ] && [ ! -d "$TILES_DIR/$only" ]; then
+    echo "no $SOURCES_DIR/$only or $TILES_DIR/$only (make list)" >&2
     exit 1
 fi
 
+# Named, and it exists in one place or the other, so asking for one kind by
+# name simply yields nothing from the other.
 examples() {
     if [ -n "$only" ]; then
-        printf '%s\n' "$EXAMPLES_DIR/$only/"
+        [ -d "$SOURCES_DIR/$only" ] && printf '%s\n' "$SOURCES_DIR/$only/"
     else
-        for dir in "$EXAMPLES_DIR"/*/; do printf '%s\n' "$dir"; done
+        for dir in "$SOURCES_DIR"/*/; do printf '%s\n' "$dir"; done
     fi
+    return 0
+}
+
+# tiles/README.md is the kind's own page, not a tile, so only directories count.
+tiles() {
+    if [ -n "$only" ]; then
+        [ -d "$TILES_DIR/$only" ] && printf '%s\n' "$TILES_DIR/$only/"
+    else
+        for dir in "$TILES_DIR"/*/; do [ -d "$dir" ] && printf '%s\n' "$dir"; done
+    fi
+    return 0
 }
 
 # The parser: whatever was handed to us, else a sibling checkout, else clone one.
@@ -109,13 +127,36 @@ resolve_parser() {
     printf '%s' "$LOOK_CHECKOUT/core/target/debug/examples/parse_check"
 }
 
+# The tile parser, same story. `resolve` never fails - a drawing it cannot
+# trust falls back to the built-in grid - so it reports everything as a warning,
+# printed `problem:` to match parse_check.
+resolve_tile_parser() {
+    if [ -n "${TILE_PARSER:-}" ]; then
+        printf '%s' "$TILE_PARSER"
+        return
+    fi
+    if [ ! -d "$LOOK_CHECKOUT" ]; then
+        git clone --depth 1 "$LOOK_REPO" "$LOOK_CHECKOUT" >&2
+    fi
+    cargo build --manifest-path "$LOOK_CHECKOUT/core/Cargo.toml" \
+        -p look-engine --example launchpad_check >&2
+    printf '%s' "$LOOK_CHECKOUT/core/target/debug/examples/launchpad_check"
+}
+
 parser="$(resolve_parser)"
 if [ ! -x "$parser" ]; then
     echo "no parser at $parser" >&2
     exit 1
 fi
 
-echo "Checking examples with $parser"
+tile_parser="$(resolve_tile_parser)"
+if [ ! -x "$tile_parser" ]; then
+    echo "no tile parser at $tile_parser" >&2
+    exit 1
+fi
+
+echo "Checking sources with $parser"
+echo "Checking tiles with $tile_parser"
 echo
 
 # 1. Every example parses on its own, and owns every id it declares.
@@ -165,9 +206,9 @@ while read -r dir; do
     fi
 
     # Kept for the README check further down, so the parser runs once per example.
-    printf '%s\n' "$output" | awk '/^block /{print $2}' > "$WORK_DIR/ids-$name"
+    printf '%s\n' "$output" | awk '/^block /{print $2}' > "$WORK_DIR/ids-$SOURCES_DIR-$name"
 
-    block_count="$(grep -c . < "$WORK_DIR/ids-$name" || true)"
+    block_count="$(grep -c . < "$WORK_DIR/ids-$SOURCES_DIR-$name" || true)"
     if [ "$block_count" -eq 0 ]; then
         fail "$name declares no blocks (a file of nothing but comments parses perfectly and does nothing)"
         continue
@@ -181,26 +222,128 @@ while read -r dir; do
             "$name" | "$name"-*) ;;
             *) fail "block [$id] must be [$name] or start with \"$name-\"" ;;
         esac
-    done < "$WORK_DIR/ids-$name"
+    done < "$WORK_DIR/ids-$SOURCES_DIR-$name"
 
     printf '  ok    %s file(s), %s block(s)\n' "${#tomls[@]}" "$block_count"
 done < <(examples)
 
 echo
 
-# The template is what every new example is copied from, so it has to parse
-# like one. It lives outside examples/ because it is not one.
+# 1b. Every tile parses, and is drawable.
+#
+# A tile example ships the block ALONE, with no `layout`: the drawing belongs to
+# the user's file and is the half they merge it into. So one is synthesized here
+# naming every tile the file declares, which is also what makes "declared but
+# never drawn" catchable.
+#
+# One file at a time, never merged: lock/ ships lock-macos.toml and
+# lock-linux.toml, both declaring [tiles.lock], and a user takes one. Merged
+# they would be a duplicate key and TOML would refuse the lot.
+tile_ids() {
+    sed -n 's/^[[:space:]]*\[tiles\.\([A-Za-z0-9_-]*\)\].*/\1/p' "$1"
+}
+
+while read -r dir; do
+    name="$(basename "$dir")"
+    printf '%s\n' "$name"
+
+    tomls=("$dir"*.toml)
+    if [ ! -e "${tomls[0]}" ]; then
+        fail "$name has no .toml file"
+        continue
+    fi
+
+    placed=0
+    : > "$WORK_DIR/ids-$TILES_DIR-$name"
+    for toml in "${tomls[@]}"; do
+        file="$(basename "$toml")"
+        case "$file" in
+            "$name".toml | "$name"-*.toml) ;;
+            *) fail "$file must be $name.toml or start with \"$name-\"" ;;
+        esac
+
+        mapfile -t ids < <(tile_ids "$toml")
+        if [ "${#ids[@]}" -eq 0 ]; then
+            fail "$file declares no [tiles.<name>] block"
+            continue
+        fi
+
+        # Same rule as a source's block ids, for the same reason: every tile
+        # lands in one shared file, where a second [tiles.disk] would collide
+        # with somebody else's.
+        for id in "${ids[@]}"; do
+            case "$id" in
+                "$name" | "$name"-*) ;;
+                *) fail "[tiles.$id] in $file must be [tiles.$name] or start with \"$name-\"" ;;
+            esac
+        done
+
+        # Six columns is the strip's own ceiling, and a tile example needing
+        # more than six tiles is not an example.
+        if [ "${#ids[@]}" -gt 6 ]; then
+            fail "$file declares ${#ids[@]} tiles; the strip is six columns wide"
+            continue
+        fi
+
+        drawing="$WORK_DIR/tile-$name-$file"
+        printf 'layout = ["%s"]\n\n' "${ids[*]}" > "$drawing"
+        cat "$toml" >> "$drawing"
+
+        if ! output="$("$tile_parser" "$drawing" 2>&1)"; then
+            printf '%s\n' "$output" | sed 's/^/  /'
+            fail "$file: the tile parser exited non-zero"
+            continue
+        fi
+
+        if printf '%s\n' "$output" | grep -q '^problem:'; then
+            printf '%s\n' "$output" | grep '^problem:' | sed 's/^/  /'
+            fail "$file does not resolve cleanly"
+            continue
+        fi
+
+        # A tile that parsed but was not placed is the failure this whole
+        # synthesized drawing exists to catch.
+        for id in "${ids[@]}"; do
+            printf '%s\n' "$output" | grep -q "^tile $id " ||
+                fail "[tiles.$id] in $file parsed but was not drawn"
+        done
+
+        printf '%s\n' "${ids[@]}" >> "$WORK_DIR/ids-$TILES_DIR-$name"
+        placed=$((placed + ${#ids[@]}))
+    done
+
+    [ "$placed" -eq 0 ] || printf '  ok    %s file(s), %s tile(s)\n' "${#tomls[@]}" "$placed"
+done < <(tiles)
+
+echo
+
+# The templates are what every new example is copied from, so each has to parse
+# like one. They live outside sources/ and tiles/ because they are neither.
 echo "template"
 template="$WORK_DIR/template"
 mkdir -p "$template"
-cp template/*.toml "$template/"
+cp template/source.toml "$template/"
 template_output="$("$parser" "$template")"
 if printf '%s\n' "$template_output" | grep -q '^problem:'; then
     printf '%s\n' "$template_output" | grep '^problem:' | sed 's/^/  /'
-    fail "template does not parse"
+    fail "template/source.toml does not parse"
 else
-    printf '  ok    %s block(s)\n' \
+    printf '  ok    source.toml, %s block(s)\n' \
         "$(printf '%s\n' "$template_output" | grep -c '^block ' || true)"
+fi
+
+tile_template="$WORK_DIR/tile-template.toml"
+{
+    printf 'layout = ["%s"]\n\n' "$(tile_ids template/tile.toml | tr '\n' ' ')"
+    cat template/tile.toml
+} > "$tile_template"
+tile_template_output="$("$tile_parser" "$tile_template")"
+if printf '%s\n' "$tile_template_output" | grep -q '^problem:'; then
+    printf '%s\n' "$tile_template_output" | grep '^problem:' | sed 's/^/  /'
+    fail "template/tile.toml does not resolve"
+else
+    printf '  ok    tile.toml, %s tile(s)\n' \
+        "$(printf '%s\n' "$tile_template_output" | grep -c '^tile ' || true)"
 fi
 
 echo
@@ -209,7 +352,7 @@ echo
 #    A duplicate id or a `then` naming a block nobody declares shows up here.
 all="$WORK_DIR/all"
 mkdir -p "$all"
-find "$EXAMPLES_DIR" -mindepth 2 -maxdepth 2 -name '*.toml' -exec cp {} "$all/" \;
+find "$SOURCES_DIR" -mindepth 2 -maxdepth 2 -name '*.toml' -exec cp {} "$all/" \;
 
 echo "every example installed together"
 combined="$("$parser" "$all")"
@@ -260,7 +403,7 @@ while read -r dir; do
     done < <(grep -nHE "$PIPE_TO_SHELL_RE" "${all_files[@]}" || true)
 
     read_count=$((read_count + 1))
-done < <(examples)
+done < <(examples; tiles)
 printf '  ok    %s example(s) read\n' "$read_count"
 
 echo
@@ -275,6 +418,9 @@ documented=0
 while read -r dir; do
     name="$(basename "$dir")"
     readme="$dir/README.md"
+    root="${dir%%/*}"
+    kind=source
+    [ "$root" = "$TILES_DIR" ] && kind=tile
 
     if [ ! -f "$readme" ]; then
         fail "$name has no README.md"
@@ -293,27 +439,38 @@ while read -r dir; do
     grep -q '^\*\*Requires\.\*\*' "$readme" ||
         fail "$name: README needs a line starting \"**Requires.**\" naming what has to be installed"
 
-    # The literal line somebody copies. new.sh gets this right; a folder renamed
-    # by hand afterwards does not, and it fails in the worst way available,
-    # which is silently installing a different example.
-    grep -qF "cp examples/$name/*.toml" "$readme" ||
-        fail "$name: README has no \"cp examples/$name/*.toml\" install line"
+    # What the reader has to do, spelled the way they will copy it. new.sh gets
+    # this right; a folder renamed by hand afterwards does not, and it fails in
+    # the worst way available, which is silently installing something else.
+    if [ "$kind" = tile ]; then
+        # No cp line for a tile, on purpose: copying one over the user's
+        # ~/.look/super-actions.toml would take their whole strip with it. The
+        # README has to say the file it is merged into.
+        grep -qF "super-actions.toml" "$readme" ||
+            fail "$name: a tile README must name ~/.look/super-actions.toml and say it is merged, not copied"
+        grep -qE '^\s*cp .*'"$name" "$readme" &&
+            fail "$name: a tile is merged into super-actions.toml, so a \"cp\" install line is wrong"
+    else
+        grep -qF "cp sources/$name/*.toml" "$readme" ||
+            fail "$name: README has no \"cp sources/$name/*.toml\" install line"
+    fi
 
-    # Every block the parser found should appear in the README's Blocks table. A
-    # block nobody documents is a row the user cannot explain when it turns up.
-    if [ -f "$WORK_DIR/ids-$name" ]; then
+    # Every block or tile the parser found should appear in the README's table.
+    # One nobody documents is something the user cannot explain when it turns up.
+    if [ -f "$WORK_DIR/ids-$root-$name" ]; then
         while read -r id; do
             [ -n "$id" ] || continue
             grep -qF -- "\`$id\`" "$readme" ||
-                fail "$name: block [$id] is not mentioned in README.md"
-        done < "$WORK_DIR/ids-$name"
+                fail "$name: [$id] is not mentioned in README.md"
+        done < <(sort -u "$WORK_DIR/ids-$root-$name")
     fi
 
-    # An example nobody can find is an example nobody runs.
-    if ! grep -q "examples/$name" "$INDEX"; then
+    # An example nobody can find is an example nobody runs. The row lives in
+    # its own kind's table, so the path is what is looked for.
+    if ! grep -q "$root/$name" "$INDEX" && ! grep -q "$root/$name" "$root/README.md" 2>/dev/null; then
         fail "$name is missing from the index table in $INDEX"
-    elif grep -qE "^\| \[$name\].*TODO" "$INDEX"; then
-        fail "$name still has the TODO row new.sh wrote into $INDEX"
+    elif grep -qE "^\| \[$name\].*TODO" "$INDEX" "$root/README.md" 2>/dev/null; then
+        fail "$name still has the TODO row new.sh wrote"
     fi
 
     for script in "$dir"bin/*; do
@@ -323,7 +480,7 @@ while read -r dir; do
     done
 
     documented=$((documented + 1))
-done < <(examples)
+done < <(examples; tiles)
 printf '  ok    %s example(s) documented\n' "$documented"
 
 echo
@@ -343,7 +500,7 @@ while read -r file; do
         continue
     fi
     fail "$file: link media, do not commit it (CONTRIBUTING)"
-done < <(find "$EXAMPLES_DIR" -type f ! -name '*.toml' ! -name '*.md' ! -path '*/bin/*' | sort)
+done < <(find "$SOURCES_DIR" "$TILES_DIR" -type f ! -name '*.toml' ! -name '*.md' ! -path '*/bin/*' | sort)
 
 # The same mistake made inside bin/, where a real script does belong.
 while read -r file; do
@@ -351,17 +508,28 @@ while read -r file; do
     size="$(wc -c < "$file")"
     [ "$size" -le "$MAX_FILE_BYTES" ] ||
         fail "$file is $((size / 1024)) KB; nothing in here should be that big"
-done < <(find "$EXAMPLES_DIR" -type f | sort)
+done < <(find "$SOURCES_DIR" "$TILES_DIR" -type f | sort)
 
-# A row pointing at a folder somebody deleted.
-while read -r name; do
-    [ -n "$name" ] || continue
-    [ -d "$EXAMPLES_DIR/$name" ] ||
-        fail "$INDEX has an index row for \"$name\", which is not in $EXAMPLES_DIR/"
-done < <(grep -oE "^\| \[[a-z0-9-]+\]" "$INDEX" | tr -d '|[] ' | sort -u)
+# A row pointing at a folder somebody deleted. Either table, either tree: the
+# row carries the path, so it says which one it meant.
+while read -r path; do
+    [ -n "$path" ] || continue
+    [ -d "$path" ] || fail "$INDEX has an index row for \"$path\", which is not there"
+done < <(grep -oE "^\| \[[a-z0-9-]+\]\((sources|tiles)/[a-z0-9-]+\)" "$INDEX" |
+    sed 's/.*(\(.*\))/\1/' | sort -u)
 
-printf '  ok    %s file(s), index table matches %s/\n' \
-    "$(find "$EXAMPLES_DIR" -type f | wc -l | tr -d ' ')" "$EXAMPLES_DIR"
+# The tiles page carries the same table for its own kind, so it goes stale the
+# same way.
+if [ -f "$TILES_DIR/README.md" ]; then
+    while read -r name; do
+        [ -n "$name" ] || continue
+        [ -d "$TILES_DIR/$name" ] ||
+            fail "$TILES_DIR/README.md lists \"$name\", which is not in $TILES_DIR/"
+    done < <(grep -oE "^\| \[[a-z0-9-]+\]" "$TILES_DIR/README.md" | tr -d '|[] ' | sort -u)
+fi
+
+printf '  ok    %s file(s), index tables match %s/ and %s/\n' \
+    "$(find "$SOURCES_DIR" "$TILES_DIR" -type f | wc -l | tr -d ' ')" "$SOURCES_DIR" "$TILES_DIR"
 
 echo
 

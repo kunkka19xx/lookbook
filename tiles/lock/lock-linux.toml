@@ -1,0 +1,21 @@
+# Lock the screen from the empty home screen. Linux.
+#
+# Merge into ~/.look/super-actions.toml: put "lock" somewhere in the `layout`
+# drawing, then paste this block onto the end of the file.
+#
+# No `value`, so nothing ever runs on its own and there is nothing to display:
+# this tile draws the way Mic and Screensaver do, as a button.
+#
+# `loginctl lock-session` asks the session to lock and lets your own locker
+# answer, so it works the same under GNOME, KDE, and a tiling WM running
+# swayidle or xss-lock. A machine with no locker listening does nothing at all,
+# which is the one case to test before trusting it.
+
+[tiles.lock]
+press = "loginctl lock-session"
+title = "Lock"
+mnemonic = "L"
+
+# `icon` is left off: SF Symbol names mean nothing here, and none of the
+# strip's own glyphs is a padlock. Point at an image of your own to get one:
+# icon = "~/.look/icons/lock.svg"

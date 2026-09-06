@@ -1,0 +1,20 @@
+# Lock the screen from the empty home screen. macOS.
+#
+# Merge into ~/.look/super-actions.toml: put "lock" somewhere in the `layout`
+# drawing, then paste this block onto the end of the file.
+#
+# No `value`, so nothing ever runs on its own and there is nothing to display:
+# this tile draws the way Mic and Screensaver do, as a button.
+#
+# `pmset displaysleepnow` sleeps the display, which locks the Mac when
+# System Settings > Lock Screen is set to ask for a password after sleep.
+
+[tiles.lock]
+press = "pmset displaysleepnow"
+title = "Lock"
+icon = "lock.fill"
+mnemonic = "L"
+
+# Uncomment to arm on the first press and fire on the second, the way Restart
+# and Shut Down do. Locking is cheap to undo, so it ships without one.
+# confirm  = "Lock the screen?"

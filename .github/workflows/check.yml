@@ -25,4 +25,8 @@ jobs:
         with:
           workspaces: .look-src/core
 
+      # make check builds two parsers out of the look checkout above:
+      # look-sources' parse_check for sources/, and look-engine's
+      # launchpad_check for tiles/. The second landed with Super Actions
+      # tiles, so a look checkout predating that will fail to build it.
       - run: make check

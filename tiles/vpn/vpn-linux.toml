@@ -1,0 +1,31 @@
+# Your VPN connection, as a Super Actions tile. Linux, NetworkManager.
+#
+# Merge into ~/.look/super-actions.toml: put "vpn" somewhere in the `layout`
+# drawing, then paste this block onto the end of the file.
+#
+# Both commands find the first VPN connection NetworkManager knows about, so
+# there is no name to hard-code. On a machine with no VPN configured, `value`
+# prints nothing and the tile is not drawn at all.
+
+[tiles.vpn]
+value = '''
+name=$(nmcli -t -f NAME,TYPE connection show | awk -F: '$2 == "vpn" || $2 == "wireguard" { print $1; exit }')
+[ -n "$name" ] || exit 0
+if nmcli -t -f NAME connection show --active | grep -qxF "$name"; then
+    printf '{"value":"ON","caption":"VPN","state":"on","lines":["%s"]}' "$name"
+else
+    printf '{"value":"OFF","caption":"VPN","state":"off","lines":["%s"]}' "$name"
+fi
+'''
+press = '''
+name=$(nmcli -t -f NAME,TYPE connection show | awk -F: '$2 == "vpn" || $2 == "wireguard" { print $1; exit }')
+[ -n "$name" ] || exit 1
+if nmcli -t -f NAME connection show --active | grep -qxF "$name"; then
+    nmcli connection down "$name"
+else
+    nmcli connection up "$name"
+fi
+'''
+refresh = "15s"
+title = "VPN"
+mnemonic = "V"

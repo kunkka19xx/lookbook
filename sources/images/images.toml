@@ -1,0 +1,34 @@
+# Image verbs on any picture Look already found, through `applies`.
+#
+# The narrow end of `applies`: every block here names an extension list, so it
+# reaches exactly the files it can act on and nothing else. Select an image,
+# press Cmd+K / Ctrl+K, and only the verbs that make sense for it are there.
+#
+# `ext` is written without the dot and matched case-insensitively, so "PNG"
+# and "png" are the same list entry.
+
+# Shrinks the file in place. oxipng is lossless: the picture is unchanged and
+# only the encoding gets smaller, which is why this one does not ask first.
+[images-optimize]
+name = "Optimise PNG"
+icon = "🗜"
+applies = { ext = ["png"] }
+do = ["oxipng -o4 --strip safe {path}"]
+
+# Writes a new file beside the original and leaves it alone, so there is
+# nothing to undo. `${path%.*}` is the path without its extension: parameter
+# expansion is the shell's, not Look's, and works because every step is shell
+# text run by your login shell.
+[images-webp]
+name = "Convert to WebP"
+icon = "🖼"
+applies = { ext = ["png", "jpg", "jpeg"] }
+do = ["p={path}; cwebp -quiet -q 82 \"$p\" -o \"${p%.*}.webp\""]
+
+# Reads rather than writes, so it is safe on anything. The output goes nowhere
+# a launcher can show it, so it is copied to the clipboard instead.
+[images-dimensions]
+name = "Copy dimensions"
+icon = "📐"
+applies = { ext = ["png", "jpg", "jpeg", "gif", "webp", "avif", "tiff", "bmp"] }
+do = ["identify -format '%wx%h' {path} | wl-copy"]

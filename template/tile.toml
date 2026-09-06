@@ -1,0 +1,51 @@
+# Every key a Super Actions tile can carry. Delete what you do not need.
+#
+# A tile is merged into ~/.look/super-actions.toml, never copied there: that
+# file holds the user's whole strip. Installing means putting the tile's name
+# in their `layout` drawing and pasting this block onto the end.
+#
+# At least one of `value` and `press` is required, and which you declare is
+# what the tile IS:
+#
+#   value          a readout. Runs on its own, shows what it printed
+#   press          a button. Runs nothing until pressed, displays nothing
+#   value + press  a readout you can also act on
+#
+# The whole format: https://github.com/kunkka19xx/look/blob/main/docs/user-guide.md#super-actions
+
+[tiles.template]
+# Prints ONE JSON object. Only "value" is required:
+#
+#   {"value": "84Gi", "caption": "DISK FREE", "lines": ["of 460Gi"],
+#    "icon": "internaldrive", "state": "off"}
+#
+# Printing nothing hides the tile, which is how one disappears on a machine
+# with nothing to report.
+#
+# Capped at two seconds and 16 KB, and killed along with anything it started.
+# Read something and print it; anything that fetches or waits belongs behind
+# `press`, or in a script that caches to a file this only reads.
+value = '''printf '{"value":"%s","caption":"TEMPLATE"}' "$(date +%H:%M)"'''
+
+# How stale that reading may get: 30s, 5m, 1h. Nothing runs inside the window.
+refresh = "5m"
+
+# What a click or the tile's key runs. Delete for a pure readout.
+press = "echo pressed"
+
+# Arms on the first press and fires on the second, the way Restart does.
+# Anything that changes the machine should have one.
+# confirm  = "Really do it?"
+
+# What it is called. Without this the name is title-cased.
+title = "Template"
+
+# The symbol drawn on it. macOS takes any SF Symbol; Linux takes one of the
+# strip's own glyph names or a path to an image; Windows the built-ins only.
+# An unrecognised name draws nothing at all.
+# icon     = "clock"
+
+# The letter that fires it, with Cmd on macOS and Alt elsewhere. Requested,
+# not granted: a letter a built-in on the strip holds is never given away, and
+# the tile still works by click.
+# mnemonic = "T"

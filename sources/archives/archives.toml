@@ -1,0 +1,39 @@
+# Unpack an archive, or pack a folder, wherever Look already found it.
+#
+# `applies` is what makes these different from every other example here: the
+# blocks declare no rows of their own. They attach to rows ANYTHING produced,
+# the files and folders Look already indexes included, so the verb turns up on
+# the tarball in ~/Downloads without a block listing that directory.
+#
+# Nothing here is a top-level row. Select a file, press Cmd+K / Ctrl+K, and the
+# matching verb is at the bottom of the menu, under the built-in ones.
+
+# `match` is a glob on the file NAME, which is why it reaches "*.tar.gz" where
+# an `ext` list cannot: two dots is not an extension.
+[archives-untar]
+name = "Unpack here"
+icon = "📦"
+applies = { match = ["*.tar", "*.tar.gz", "*.tgz", "*.tar.bz2", "*.tbz2", "*.tar.xz", "*.txz", "*.tar.zst"] }
+do = ["tar -xf {path} -C {dir}"]
+
+# zip is not tar, so it is a second block. `ext` is the shorter way to say the
+# same thing when the extension really is one word, and it ignores case.
+[archives-unzip]
+name = "Unpack here"
+icon = "📦"
+applies = { ext = ["zip"] }
+do = ["unzip -q {path} -d {dir}"]
+
+# The same idea pointed the other way: an action on a FOLDER. `only = "dirs"`
+# keeps it off every file row in the launcher.
+#
+# `{dir}` is no use here: on a folder row it is the folder itself, not its
+# parent, so tar would be asked to find the folder inside itself. dirname and
+# basename take the parent and the name. Both placeholders are shell-escaped
+# before they are substituted, so a folder called "My Project" is safe.
+[archives-compress]
+name = "Compress folder"
+icon = "🗜"
+applies = { only = "dirs" }
+confirm = "Create {title}.tar.gz beside it?"
+do = ["tar -czf {path}.tar.gz -C \"$(dirname {path})\" \"$(basename {path})\""]

@@ -1,0 +1,16 @@
+# Free space on the root filesystem, as a Super Actions tile.
+#
+# Merge into ~/.look/super-actions.toml: put "disk" somewhere in the `layout`
+# drawing, then paste this block onto the end of the file.
+#
+# One `df` call, once every five minutes. `awk` reads two columns out of the
+# same line rather than running df twice: the whole tile is one process.
+
+[tiles.disk]
+value = '''df -h / | awk 'NR==2 {printf "{\"value\":\"%s\",\"caption\":\"DISK FREE\",\"lines\":[\"of %s\"]}", $4, $2}' '''
+refresh = "5m"
+title = "Disk"
+
+# macOS only, as written: internaldrive is an SF Symbol. On Linux name one of
+# the strip's own glyphs or a path to an image; on Windows drop the line.
+# icon    = "internaldrive"

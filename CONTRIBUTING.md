@@ -1,40 +1,49 @@
 # Contributing an example
 
-One folder under `examples/` is one **topic**: a tool, or a job you do. It holds one `.toml` file or several, plus a README.
+Two kinds live here, and which one you are writing decides where it goes and how it is installed:
+
+- a **source** adds rows to the launcher, and is **copied** into `~/.look/sources/`;
+- a **tile** adds a tile to the Super Actions strip, and is **merged** into `~/.look/super-actions.toml`, a single file that holds the user's whole strip.
+
+Everything below applies to both unless it says otherwise. One folder is one **topic**: a tool, or a job you do. It holds one `.toml` file or several, plus a README.
 
 ```bash
-make new NAME=tmux
+make new NAME=tmux        # a source, in sources/
+make new-tile NAME=disk   # a tile, in tiles/
 ```
 
-That copies the template into `examples/tmux/`, renames the folder, the file, the block ids and the display name, and adds a row to the index table in this repo's README. What is left is the part only you can write: the commands, and the sentences describing them.
+That copies the right template, renames the folder, the file, the ids and the display name, and adds a row to the matching index table in this repo's README. What is left is the part only you can write: the commands, and the sentences describing them.
 
 ```bash
-make install NAME=tmux    # copy it into ~/.look/sources and try it for real
+make install NAME=tmux    # a source: copy it into ~/.look/sources and try it for real
+make show NAME=disk       # a tile: print the block to paste, and where
 make check                # parse it the way Look would
 make uninstall NAME=tmux
 ```
 
 `make` on its own lists everything.
 
-> **You need Look v0.6.12 or newer to test anything here.** An older build never reads `~/.look/sources/`, so your example will look broken when it is fine.
+There is deliberately **no `make install` for a tile.** `~/.look/super-actions.toml` is the user's own layout, and a script that edited it would be rearranging their strip. Installing one is two edits they make by hand: the tile's name into the `layout` drawing, and the block onto the end.
+
+> **Sources need Look v0.6.12 or newer to test; tiles and `applies` need v0.6.13.** An older build ignores what it does not know about, so your example looks broken when it is fine.
 
 ```
-examples/git/
+sources/git/                tiles/lock/
 ├── README.md            # required
-├── git-branches.toml    # one file, or several
-├── git-worktrees.toml
-└── bin/                 # optional helper scripts
+├── git-branches.toml    ├── README.md          # required
+├── git-worktrees.toml   ├── lock-macos.toml    # one file, or several
+└── bin/                 └── lock-linux.toml
 ```
 
-Several files in one folder is the normal case for a tool with more than one useful source. They are independent: a user can copy one, the other, or both.
+Several files in one folder is the normal case. For a source they are independent, and a user can copy one, the other, or both. For a tile they are usually **alternatives** — `lock-macos.toml` and `lock-linux.toml` declare the same `[tiles.lock]` for two systems, and a user takes one. The checker reads each tile file on its own for exactly that reason.
 
 ## The naming rule
 
 **Every file name and every block id starts with the folder name.**
 
 ```
-examples/git/git-branches.toml     # good
-examples/git/worktrees.toml        # NO: someone else will ship worktrees.toml
+sources/git/git-branches.toml     # good
+sources/git/worktrees.toml        # NO: someone else will ship worktrees.toml
 ```
 
 ```toml
@@ -78,6 +87,13 @@ This is not style, it is the only thing keeping installed examples apart. Everyt
 - [ ] A `bin/` script is executable, has a shebang, and the README says where to put it.
 - [ ] A demo GIF or screenshot is **linked**, not committed. [See below](#link-a-gif-do-not-commit-it).
 - [ ] No metadata table in the `.toml`. Every top-level table is a block, so a `[_meta]` fails to parse. Put context in the README or in `#` comments.
+
+Four more for a **tile**:
+
+- [ ] Its `value` command finishes in **under two seconds on a cold machine**, not just on yours. Past that it is killed along with anything it started, and the tile keeps its last good reading.
+- [ ] It declares no `layout`. The drawing belongs to the user's file; ship the `[tiles.<name>]` block alone.
+- [ ] The README says it is **merged** into `~/.look/super-actions.toml`, and shows the `layout` line to change. No `cp` install line: copying over that file takes the user's whole strip with it.
+- [ ] `icon` is labelled per platform. An SF Symbol name means nothing on Linux, an image path means nothing on Windows, and an unrecognised name draws nothing at all rather than a placeholder.
 
 ## Say which platforms it works on
 
@@ -128,6 +144,19 @@ Reload with `Cmd+Shift+;` (macOS) or `Ctrl+Shift+;` (Linux, Windows), then walk 
 - [ ] **`confirm` names the right row.** The question is expanded, so it should read "Delete branch main?", not "Delete branch {id}?".
 - [ ] **The failure mode is not silent.** Rename the tool it depends on, reload, and check that you get something readable instead of an empty list.
 
+A **tile** is merged rather than installed, so the walk is its own:
+
+```bash
+make show NAME=my-tile    # then paste it in, and add the name to your layout
+```
+
+- [ ] **The tile is drawn**, in the cell you drew it in, at the size you gave it.
+- [ ] **What it shows is right**, and still right after its `refresh` window lapses.
+- [ ] **Press does what it says**, and `confirm` arms on the first press and fires on the second.
+- [ ] **Its letter works**, or is legitimately taken by a built-in on your strip.
+- [ ] **The failure mode is not silent.** Rename the tool it depends on and reload: the tile should keep its last reading and say what happened, never blank the strip.
+- [ ] **It behaves when there is nothing to report.** A tile whose `value` prints nothing is not drawn, which is usually what you want; check it is not printing an empty box instead.
+
 Two things to know while you are testing:
 
 - **A failing `run` block keeps its previous rows.** That is deliberate, since losing them would also lose their ranking, but during development it means you can be looking at output from two edits ago. If a change seems to do nothing, check the command in a terminal.
@@ -135,12 +164,12 @@ Two things to know while you are testing:
 
 ## README shape
 
-Short. [`template/README.md`](template/README.md) is the whole thing, and it fits on a screen:
+Short. [`template/source-README.md`](template/source-README.md) and [`template/tile-README.md`](template/tile-README.md) are the whole thing, and each fits on a screen:
 
 - **A sentence or two** at the top saying what you get.
 - **Requires** and **Platforms** lines.
-- **Install**: the `cp` line, plus anything extra (a `bin/` script, a `then` line to add elsewhere).
-- **Blocks**: a table of id, what it lists, what Enter does.
+- **Install**: for a source, the `cp` line plus anything extra (a `bin/` script, a `then` line to add elsewhere). For a tile, the `layout` line to change and the block to paste.
+- **Blocks** (or **The tile**): a table of id, what it shows, what Enter or a press does.
 - **Customise**: the two or three lines people will want to change first.
 
 Add a section beyond that only when something is genuinely confusing. The `git` example explains `{path}` versus `{parent.path}` because that one catches everybody; most examples need nothing extra.
@@ -152,7 +181,7 @@ make check                # everything
 make check NAME=tmux      # just the one you are working on
 ```
 
-It borrows Look's own parser, so it catches exactly what Look would: unknown keys, a block with no producer, a dangling `then`, a duplicate id, a bad glob. Then it reads the checklist above back to you: a hard-coded home directory, a placeholder you quoted, a `curl` into a shell, a missing **Requires** or **Platforms** line, a block your README never mentions, an install line naming somebody else's folder, the `TODO` row `make new` left in the index, a committed GIF. The same script runs in CI.
+It borrows Look's own parsers — `look-sources` for `sources/`, the launchpad resolver for `tiles/` — so it catches exactly what Look would: unknown keys, a block with no producer, a dangling `then`, a duplicate id, a bad glob. Then it reads the checklist above back to you: a hard-coded home directory, a placeholder you quoted, a `curl` into a shell, a missing **Requires** or **Platforms** line, a block your README never mentions, an install line naming somebody else's folder, the `TODO` row `make new` left in the index, a committed GIF. For a tile it also synthesizes a `layout` naming everything the file declares, so a tile that parses but cannot be placed — drawn under its minimum size, asking for a letter nothing can grant — fails here rather than on someone's strip. The same script runs in CI.
 
 Two boxes it cannot tick, and they are the two that catch the most: **that you installed it and used it**, and **that a command only one OS understands is labelled as such**. Neither is decidable from the text, so both stay yours.
 
