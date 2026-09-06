@@ -32,8 +32,18 @@ do = ["unzip -q {path} -d {dir}"]
 # basename take the parent and the name. Both placeholders are shell-escaped
 # before they are substituted, so a folder called "My Project" is safe.
 [archives-compress]
-name = "Compress folder"
+name = "Compress as tar.gz"
 icon = "🗜"
 applies = { only = "dirs" }
 confirm = "Create {title}.tar.gz beside it?"
 do = ["tar -czf {path}.tar.gz -C \"$(dirname {path})\" \"$(basename {path})\""]
+
+# ZIP compression needs its own block because one block has one command. It
+# uses the same parent-and-basename shape as tar so the archive lands beside
+# the folder rather than inside it.
+[archives-zip]
+name = "Compress as ZIP"
+icon = "🗜"
+applies = { only = "dirs" }
+confirm = "Create {title}.zip beside it?"
+do = ["cd \"$(dirname {path})\" && zip -qr {path}.zip \"$(basename {path})\""]

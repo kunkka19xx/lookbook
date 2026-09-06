@@ -1,12 +1,12 @@
 # archives
 
-**Unpack here** on any archive Look finds, and **Compress folder** on any folder. Select one, press `Cmd+K` / `Ctrl+K`, and the verb is there.
+**Unpack here** on any archive Look finds, and **Compress as tar.gz** or **Compress as ZIP** on any folder. Select one, press `Cmd+K` / `Ctrl+K`, and the verb is there.
 
 No list to declare and nothing to keep up to date. These blocks produce no rows at all: they use `applies` to attach themselves to rows *everything else* produced, including the files and folders Look already indexes. The tarball you downloaded five minutes ago has the verb on it because the file index found the file, not because this source knows about `~/Downloads`.
 
-**Requires.** Look v0.6.13 or newer, which is when `applies` arrived. `tar` for the tar verbs, `unzip` for the zip one.
+**Requires.** Look v0.6.13 or newer, which is when `applies` arrived. `tar` for the tar verbs, and `zip` plus `unzip` for the ZIP verbs.
 
-**Platforms.** Linux, where the commands above were run as written. macOS ships the same `tar` and `unzip` and should take them unchanged, but they have not been run there. Windows has neither.
+**Platforms.** Linux, where the commands above were run as written. macOS ships the same `tar`, `zip`, and `unzip` and should take them unchanged, but they have not been run there. Windows has none of these commands in the same form.
 
 ## Install
 
@@ -16,7 +16,7 @@ cp sources/archives/*.toml ~/.look/sources/
 
 Reload with `Cmd+Shift+;` (macOS) or `Ctrl+Shift+;` (Linux, Windows).
 
-Nothing appears in the launcher afterwards, and that is correct. `applies` blocks are verbs, not lists: to see them, select a `.tar.gz` or a folder and press `Cmd+K`.
+Nothing appears in the launcher afterwards, and that is correct. `applies` blocks are verbs, not lists: to see them, select a `.tar.gz`, a `.zip`, or a folder and press `Cmd+K`.
 
 ## Blocks
 
@@ -25,6 +25,7 @@ Nothing appears in the launcher afterwards, and that is correct. `applies` block
 | `archives-untar` | `*.tar`, `*.tar.gz`, `*.tgz`, `*.tar.bz2`, `*.tar.xz`, `*.tar.zst` and friends | extracts beside the archive |
 | `archives-unzip` | any `.zip` | extracts beside the archive |
 | `archives-compress` | any folder | writes `<folder>.tar.gz` next to it, after asking |
+| `archives-zip` | any folder | writes `<folder>.zip` next to it, after asking |
 
 ## How `applies` picks rows
 
@@ -53,13 +54,13 @@ The one thing that catches people writing an `applies` block for folders:
 - on a **file** row, `{dir}` is the file's parent, which is what "unpack here" means;
 - on a **folder** row, `{dir}` is **that folder**, not its parent.
 
-So `tar -C {dir}` is exactly right for extracting and exactly wrong for compressing, where it would ask `tar` to find the folder inside itself. `archives-compress` uses `dirname` and `basename` on `{path}` instead. Both substitutions are shell-escaped before they land, so a folder called `My Project` is handled and a folder called `; rm -rf ~` is inert.
+So `tar -C {dir}` is exactly right for extracting and exactly wrong for compressing, where it would ask `tar` to find the folder inside itself. The compression blocks use `dirname` and `basename` on `{path}` instead. Both substitutions are shell-escaped before they land, so a folder called `My Project` is handled and a folder called `; rm -rf ~` is inert.
 
 ## Keep them narrow
 
 Every `applies` block puts one more entry on the `Cmd+K` menu of every row it matches, forever. **Ten per row is the ceiling**; past that the rest are dropped, highest `bias` first, and the overflow is reported.
 
-That is the argument against `applies = "paths"` for anything but a verb you genuinely want on every row in the launcher. These three are narrow by construction: two extension sets and directories.
+That is the argument against `applies = "paths"` for anything but a verb you genuinely want on every row in the launcher. These four are narrow by construction: two extension sets and two directory actions.
 
 ## Customise
 
@@ -70,5 +71,5 @@ That is the argument against `applies = "paths"` for anything but a verb you gen
   ```
 
 - **More formats.** `7z x {path} -o{dir}` for `.7z`, `unrar x {path} {dir}` for `.rar`, `zstd -d {path}` for a lone `.zst`. Each is another block with its own `applies`; a block has one `do` and one match.
-- **A `confirm` on extraction.** Not shipped: extracting adds files and adds nothing else. Compressing writes a new file, so that one asks.
+- **A `confirm` on extraction.** Not shipped: extracting adds files and adds nothing else. Both compression actions write a new file, so they ask.
 - **Narrow it to one directory.** `applies` has no path filter, on purpose. If you only ever unpack in `~/Downloads`, a plain `dir` block over that folder with a `then` target is the better shape, and it gives you the list too.
