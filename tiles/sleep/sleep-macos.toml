@@ -1,0 +1,19 @@
+# Put your Mac to sleep. macOS.
+#
+# Merge into ~/.look/super-actions.toml: put "sleep" somewhere in the `layout`
+# drawing, then paste this block onto the end of the file.
+#
+# No `value`, so nothing ever runs on its own and there is nothing to display:
+# this tile draws the way Mic and Screensaver do, as a button.
+#
+# `osascript -e \"tell application \\\"Finder\\\" to sleep\"` uses AppleScript
+# to put your Mac to sleep, just like the Sleep menu item in the Apple Menu.
+
+[tiles.sleep]
+press = "osascript -e \"tell application \\\"Finder\\\" to sleep\""
+title = "Sleep"
+icon  = "moon.zzz.fill"
+mnemonic = "S"
+
+# Comment if you don't want to confirm beforehand.
+confirm  = "Put Mac to sleep?"

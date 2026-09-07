@@ -95,7 +95,8 @@ The **Platforms** column is what the author tested, not what might work.
 | Tile | Requires | Shows off | Platforms |
 | --- | --- | --- | --- |
 | [disk](disk) | none | `value`: a readout with a caption and a second line, on a `refresh` | macOS, Linux |
-| [lock](lock) | none | `press` with no `value`: a button, with `confirm`, `icon` and `mnemonic` | macOS, Linux |
+| [lock](lock) | none | `press` with no `value`, a button with `confirm`, `icon` and `mnemonic` | macOS, Linux |
+| [sleep](lock) | none | `press` with no `value`, a button with `confirm`, `icon` and `mnemonic` | macOS |
 | [vpn](vpn) | NetworkManager (Linux), `scutil` (macOS) | `state` for the on/off treatment, and printing nothing to hide the tile | Linux, macOS |
 
 ## Read before you install
