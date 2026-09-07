@@ -24,6 +24,14 @@ icon = "📦"
 applies = { ext = ["zip"] }
 do = ["unzip -q {path} -d {dir}"]
 
+# RAR uses its own extractor. `-o-` skips existing files instead of asking an
+# overwrite question that a launcher action has no stdin to answer.
+[archives-unrar]
+name = "Unpack here"
+icon = "📦"
+applies = { ext = ["rar"] }
+do = ["unrar x -o- {path} {dir}/"]
+
 # The same idea pointed the other way: an action on a FOLDER. `only = "dirs"`
 # keeps it off every file row in the launcher.
 #
@@ -47,3 +55,12 @@ icon = "🗜"
 applies = { only = "dirs" }
 confirm = "Create {title}.zip beside it?"
 do = ["cd \"$(dirname {path})\" && zip -qr {path}.zip \"$(basename {path})\""]
+
+# RAR compression follows the same layout: change to the parent so the
+# selected folder stays as the archive root, then write the archive beside it.
+[archives-rar]
+name = "Compress as RAR"
+icon = "🗜"
+applies = { only = "dirs" }
+confirm = "Create {title}.rar beside it?"
+do = ["cd \"$(dirname {path})\" && rar a -idq {path}.rar \"$(basename {path})\""]
