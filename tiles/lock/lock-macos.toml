@@ -15,14 +15,10 @@ title = "Lock"
 icon = "lock.fill"
 mnemonic = "L"
 
-# If the command fails or the display wakes immediatly, using `osascript`
-# with an AppleScript before calling `pmset` works reliably on macOS systems.
-
-# [tiles.lock]
-# press = "osascript -e \"tell application \\\"System Events\\\" to key code 12 using {control down, command down}\"; pmset displaysleepnow"
-# title = "Lock"
-# icon = "lock.fill"
-# mnemonic = "L"
+# If the command fails or the display wakes immediately, replace the `press`
+# line above with this one - it locks via AppleScript before sleeping, and
+# needs Automation permission (System Settings > Privacy & Security).
+# press = '''osascript -e 'tell application "System Events" to key code 12 using {control down, command down}'; pmset displaysleepnow'''
 
 # Uncomment to arm on the first press and fire on the second, the way Restart
 # and Shut Down do. Locking is cheap to undo, so it ships without one.
