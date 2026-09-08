@@ -56,7 +56,7 @@ The following command uses `osascript` to trigger the lock screen shortcut via A
 *(Note: We use hardware key code 12 instead of the literal character "q" to ensure this command works reliably across all international keyboard layouts, such as AZERTY or Dvorak).*
 
 ```bash
-osascript -e \"tell application \\\"System Events\\\" to key code 12 using {control down, command down}\"; pmset displaysleepnow
+osascript -e 'tell application "System Events" to key code 12 using {control down, command down}'; pmset displaysleepnow
 ```
 
 Of course, if you only want to lock the computer without putting the display to sleep, you can omit the `pmset` command entirely.
