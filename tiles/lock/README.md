@@ -8,6 +8,10 @@ The other shape a tile has. It declares `press` and no `value`, so nothing ever 
 
 **Platforms.** macOS and Linux, one file each. Both blocks parse and place correctly; neither `press` command has been fired here, because running one locks the machine you are testing on. Run yours in a terminal once before trusting the tile - on macOS it locks only if System Settings > Lock Screen asks for a password after sleep, and on Linux only if something in your session is listening (see below).
 
+> [!NOTE]
+> **For macOS users.**
+> The `pmset displaysleepnow` command may fail or wake up immediately if active power assertions, connected peripherals, or background applications are blocking display sleep. If that is the case, see [here](#alternative-methods-for-macos) for alternative methods.
+
 ## Install
 
 Tiles are merged, not copied. Two edits in `~/.look/super-actions.toml`:
@@ -40,6 +44,29 @@ Both commands ask the system to lock rather than drawing a lock screen themselve
 - **Linux.** `loginctl lock-session` raises the lock signal and waits for something to answer: GNOME and KDE answer themselves, and a tiling WM answers through `swayidle`, `xss-lock` or `hypridle`. With no locker running, nothing happens and nothing is reported.
 
 Test it once before you trust it, because a lock tile that silently does nothing is worse than no tile.
+
+## Alternative methods for macOS
+
+If `pmset displaysleepnow` fails or allows background activity to wake the display, you can use AppleScript as a reliable alternative. Instead of relying solely on background commands, AppleScript simulates the native macOS lock screen keystroke to force a secure state.
+
+> [!IMPORTANT]
+> Because AppleScript simulates system-level keystrokes, Look requires Automation permission. You will see a macOS system prompt asking you to grant this access.
+
+The following command uses `osascript` to trigger the lock screen shortcut via AppleScript `System Events` before running `pmset displaysleepnow` to put the display to sleep. This will prevent background activity from immediately waking the system.
+
+*(Note: We use hardware key code 12 instead of the literal character "q" to ensure this command works reliably across all international keyboard layouts, such as AZERTY or Dvorak).*
+
+```bash
+osascript -e 'tell application "System Events" to key code 12 using {control down, command down}'; pmset displaysleepnow
+```
+
+Of course, if you only want to lock the computer without putting the display to sleep, you can omit the `pmset` command entirely.
+
+### Troubleshooting Permissions
+If you accidentally decline the prompt or the command fails, you can grant permission manually:
+1. Open **System Settings** on your Mac.
+2. Navigate to **Privacy & Security** > **Automation**.
+3. Locate **Look** and toggle the switch to enable access for **System Events**.
 
 ## Customise
 
