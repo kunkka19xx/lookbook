@@ -8,7 +8,8 @@ The other shape a tile has. It declares `press` and no `value`, so nothing ever 
 
 **Platforms.** macOS and Linux, one file each. Both blocks parse and place correctly; neither `press` command has been fired here, because running one locks the machine you are testing on. Run yours in a terminal once before trusting the tile - on macOS it locks only if System Settings > Lock Screen asks for a password after sleep, and on Linux only if something in your session is listening (see below).
 
-> [!NOTE] Note for macOS users
+> [!NOTE]
+> **For macOS users.**
 > The `pmset displaysleepnow` command may fail or wake up immediately if active power assertions, connected peripherals, or background applications are blocking display sleep. If that is the case, see [here](#alternative-methods-for-macos) for alternative methods.
 
 ## Install
