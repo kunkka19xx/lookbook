@@ -24,6 +24,14 @@ icon = "📦"
 applies = { ext = ["zip"] }
 do = ["unzip -q {path} -d {dir}"]
 
+# RAR uses its own extractor. `-o-` skips existing files instead of asking an
+# overwrite question that a launcher action has no stdin to answer.
+[archives-unrar]
+name = "Unpack here"
+icon = "📦"
+applies = { ext = ["rar"] }
+do = ["unrar x -o- {path} {dir}/"]
+
 # The same idea pointed the other way: an action on a FOLDER. `only = "dirs"`
 # keeps it off every file row in the launcher.
 #
@@ -32,8 +40,27 @@ do = ["unzip -q {path} -d {dir}"]
 # basename take the parent and the name. Both placeholders are shell-escaped
 # before they are substituted, so a folder called "My Project" is safe.
 [archives-compress]
-name = "Compress folder"
+name = "Compress as tar.gz"
 icon = "🗜"
 applies = { only = "dirs" }
 confirm = "Create {title}.tar.gz beside it?"
 do = ["tar -czf {path}.tar.gz -C \"$(dirname {path})\" \"$(basename {path})\""]
+
+# ZIP compression needs its own block because one block has one command. It
+# uses the same parent-and-basename shape as tar so the archive lands beside
+# the folder rather than inside it.
+[archives-zip]
+name = "Compress as ZIP"
+icon = "🗜"
+applies = { only = "dirs" }
+confirm = "Create {title}.zip beside it?"
+do = ["cd \"$(dirname {path})\" && zip -qr {path}.zip \"$(basename {path})\""]
+
+# RAR compression follows the same layout: change to the parent so the
+# selected folder stays as the archive root, then write the archive beside it.
+[archives-rar]
+name = "Compress as RAR"
+icon = "🗜"
+applies = { only = "dirs" }
+confirm = "Create {title}.rar beside it?"
+do = ["cd \"$(dirname {path})\" && rar a -idq {path}.rar \"$(basename {path})\""]

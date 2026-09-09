@@ -120,7 +120,7 @@ The **Platforms** column is what the author tested, not what might work. Where a
 | [homebrew](sources/homebrew) | brew, jq   | two lists in one folder; `confirm` on Enter, and a `preview` that has to be fast | macOS                 |
 | [niri](sources/niri)                 | niri, swww, wl-clipboard | image rows with previews; which block shape can warn a tool is missing | Linux (niri)          |
 | [meeting](sources/meeting) | none       | `do` + `preview` for clock-dependent data that must not go stale | macOS                 |
-| [archives](sources/archives) | tar, unzip | `applies`: a verb on rows the block did not produce, by `match` glob | Linux |
+| [archives](sources/archives) | tar, zip, unzip | `applies`: a verb on rows the block did not produce, by `match` glob | Linux |
 | [images](sources/images) | oxipng, cwebp, ImageMagick | `applies` by `ext`, one block per tool that can actually act | Linux |
 <!-- /index:sources -->
 
