@@ -132,7 +132,8 @@ Tiles go on the Super Actions strip, and are **merged** into `~/.look/super-acti
 | Tile | Requires | Shows off | Platforms |
 | --- | --- | --- | --- |
 | [disk](tiles/disk) | none | `value`: a readout with a caption and a second line, on a `refresh` | Linux |
-| [lock](tiles/lock) | none | `press` with no `value`: a button, with `confirm`, `icon` and `mnemonic` | macOS, Linux |
+| [lock](tiles/lock) | none | `press` with no `value`, a button, with `confirm`, `icon` and `mnemonic` | macOS, Linux |
+| [sleep](tiles/sleep) | none | `press` with no `value`, a button with `confirm`, `icon` and `mnemonic` | macOS |
 | [vpn](tiles/vpn) | NetworkManager | `state` for the on/off treatment, and printing nothing to hide the tile | Linux |
 <!-- /index:tiles -->
 
