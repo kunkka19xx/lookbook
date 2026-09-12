@@ -32,6 +32,14 @@ Reload with `Cmd+Shift+;`.
 | `meeting-agenda` | one row, always | opens Calendar; the preview lists what is left |
 | `meeting-list` | one row per meeting, via `Cmd+K` | joins that meeting |
 
+## The same meeting, as a tile
+
+The script also has a `--tile` mode, which prints the next meeting as one JSON
+object for the Super Actions strip - the countdown on your home screen before
+you type anything, and a press to join. That is [`tiles/next-meeting`](../../tiles/next-meeting),
+and it runs this script rather than carrying its own copy of the query, so
+installing this source is step one of installing that tile.
+
 ## What the panel shows
 
 ```

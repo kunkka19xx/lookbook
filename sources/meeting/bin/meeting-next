@@ -4,6 +4,8 @@
 #   meeting-next            what is next, for the preview pane
 #   meeting-next --join     open its join link
 #   meeting-next --agenda   what is left today
+#   meeting-next --tile     the same meeting as one JSON object, for the Super
+#                           Actions tile in tiles/next-meeting
 #
 # Reads macOS's own EventKit store with the sqlite3 that ships in /usr/bin, so
 # there is nothing to install. That store is PRIVATE and undocumented: Apple can
@@ -25,6 +27,11 @@ BEHIND_MINUTES=${LOOK_MEETING_BEHIND_MINUTES:-15}
 
 # Rows listed by --agenda.
 AGENDA_LIMIT=${LOOK_MEETING_AGENDA_LIMIT:-10}
+
+# When --tile starts calling a meeting urgent: it takes the strip's active tint
+# from here on, the same treatment Wi-Fi gets for being on. Ten minutes is about
+# when you stop reading the tile and start pressing it.
+SOON_MINUTES=${LOOK_MEETING_SOON_MINUTES:-10}
 
 DB=${LOOK_MEETING_DB:-$HOME/Library/Group Containers/group.com.apple.calendar/Calendar.sqlitedb}
 
@@ -197,6 +204,15 @@ short_link() {
     printf '%s' "${1#*://}"
 }
 
+# A meeting title is someone else's text going into JSON, so it is quoted
+# rather than trusted: `Q3 "all hands"` would otherwise close the string early
+# and the tile would show its last good reading instead of today's meeting. The
+# query already scrubbed the control characters, so a quote and a backslash are
+# all that is left to escape.
+json_escape() {
+    printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
 # label + value, aligned. The panel is monospaced, so a fixed-width label
 # column is free and makes four facts scannable instead of read.
 field() {
@@ -292,6 +308,63 @@ case "${1:-}" in
         fi
         ;;
 
+    # The same lookup as the preview, shaped for a Super Actions tile: one JSON
+    # object and nothing else on stdout. See tiles/next-meeting in this repo.
+    #
+    # Printing nothing is not a failure here - it is how the tile leaves the
+    # strip on a day with no meetings, instead of sitting on it saying "none".
+    --tile)
+        IFS="$SEP" read -r starts ends title conference url place notes < <(query 1)
+        [ -n "${starts:-}" ] || exit 0
+
+        # `video.fill` only when there is somewhere to press to: a meeting in a
+        # room keeps the calendar mark. The icon is the whole answer to "can I
+        # join this from here", which is why the line below never says Zoom or
+        # Meet - naming the provider would be the icon a second time, in words.
+        #
+        # A room is not the icon a second time. When there is nothing to press,
+        # where to go is the one thing left worth printing.
+        if link=$(join_link "$conference" "$url" "$place $notes"); then
+            icon="video.fill"
+            where=""
+        else
+            icon="calendar"
+            # A location holding a URL is a link that was not recognised, not a
+            # room, and printing it would be a line of unreadable query string.
+            case "$place" in
+                '' | http*) where="" ;;
+                *)          where="$place" ;;
+            esac
+        fi
+
+        # `state` is the strip's on/off treatment, the tint Wi-Fi takes for
+        # being on. Here it means "this one is now", so the tile changes colour
+        # across the room rather than asking to be read.
+        if [ $(( starts - now )) -le $(( SOON_MINUTES * 60 )) ]; then
+            state=on
+        else
+            state=off
+        fi
+
+        # Three lines, and no `caption`: the tile puts its title on the first
+        # line to carry the mnemonic's letter, so a caption would be a fourth.
+        # The name moves down here beside the time instead.
+        #
+        # The NAME is clipped rather than the line. A tile truncates from the
+        # end, so an hour-long title would take the time with it and leave a
+        # countdown with no clock next to it.
+        name=$title
+        [ "${#name}" -gt 24 ] && name="${name:0:23}…"
+
+        detail="$name  ·  $(date -r "$starts" '+%a %H:%M') – $(date -r "$ends" '+%H:%M')"
+        [ -n "$where" ] && detail="$detail  ·  $where"
+
+        printf '{"value":"%s","lines":["%s"],"icon":"%s","state":"%s"}\n' \
+            "$(json_escape "$(relative "$starts")")" \
+            "$(json_escape "$detail")" \
+            "$icon" "$state"
+        ;;
+
     # One row per meeting, for the drill-down in meeting.toml. Tab separated:
     # id, title, subtitle - which is the `lines` format with nothing declared.
     #
@@ -330,7 +403,7 @@ case "${1:-}" in
         ;;
 
     *)
-        echo "usage: meeting-next [--join|--agenda|--rows [filter]|--open <target>]" >&2
+        echo "usage: meeting-next [--join|--tile|--agenda|--rows [filter]|--open <target>]" >&2
         exit 2
         ;;
 esac

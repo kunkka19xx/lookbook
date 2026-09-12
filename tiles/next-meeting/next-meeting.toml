@@ -1,0 +1,34 @@
+# Your next meeting, on the empty home screen, and pressing it joins.
+#
+# Merge into ~/.look/super-actions.toml: put "next-meeting" somewhere in the
+# `layout` drawing, then paste this block onto the end of the file. Draw it
+# wide - two cells or more - or the title and the time have nowhere to go.
+#
+# This is the one tile here that is not self-contained. Reading the macOS
+# calendar is a hundred lines of sqlite rather than a shell one-liner, and that
+# script already exists as the `meeting` source in this repo, so the tile runs
+# that instead of carrying a second copy of it:
+#
+#     make install NAME=meeting
+#
+# Read sources/meeting/README.md first. It needs Full Disk Access for Look,
+# which is a much larger grant than a tile usually asks for, and Look's own
+# `join` command answers the same question with no grant at all.
+
+[tiles.next-meeting]
+value   = "~/.look/bin/meeting-next --tile"
+press   = "~/.look/bin/meeting-next --join"
+
+# A countdown, so it may not be a minute stale. The command copies a 2 MB
+# sqlite file and reads one row out of it - 60 ms here - and nothing runs at
+# all inside the window, so most opens of Look cost nothing either way.
+refresh = "60s"
+
+# The title is what the letter lives in, so it is set rather than left to the
+# id: "Next-meeting" is not a thing anyone wants to read on their home screen.
+title    = "Next meeting"
+mnemonic = "N"   # Cmd+N (Alt+N elsewhere), and the N in "Next" is highlighted
+
+# No `icon` key on purpose. --tile prints one with each reading and a printed
+# icon wins: video.fill when the meeting has a link to press, calendar when it
+# is a room you walk to. A fixed icon could not tell you which it is.

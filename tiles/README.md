@@ -96,6 +96,7 @@ The **Platforms** column is what the author tested, not what might work.
 | --- | --- | --- | --- |
 | [disk](disk) | none | `value`: a readout with a caption and a second line, on a `refresh` | macOS, Linux |
 | [lock](lock) | none | `press` with no `value`, a button with `confirm`, `icon` and `mnemonic` | macOS, Linux |
+| [next-meeting](next-meeting) | the `meeting` source, Full Disk Access | a long tile: `value` and `press` over one script, and the tint as a deadline | macOS |
 | [sleep](lock) | none | `press` with no `value`, a button with `confirm`, `icon` and `mnemonic` | macOS |
 | [vpn](vpn) | NetworkManager (Linux), `scutil` (macOS) | `state` for the on/off treatment, and printing nothing to hide the tile | Linux, macOS |
 
