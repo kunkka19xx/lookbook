@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+"""Panel blocks for Look's "New note" row: where the note lands, and what is
+already there. Prints a JSON array of detail blocks, which Look renders as a
+layout; anything else it prints would be shown as plain text.
+
+    note-preview <vault-dir> [name]
+"""
+import json
+import os
+import sys
+
+vault = os.path.expanduser(sys.argv[1] if len(sys.argv) > 1 else "~/Documents/notes")
+name = (sys.argv[2] if len(sys.argv) > 2 else "").strip()
+home = os.path.expanduser("~")
+
+fields = []
+if name:
+    target = os.path.join(vault, f"{name}.md")
+    fields.append({"label": "Creates", "value": target.replace(home, "~")})
+    if os.path.exists(target):
+        fields.append({"label": "Careful", "value": "a note with this name already exists"})
+else:
+    fields.append({"label": "Creates", "value": "an untitled note"})
+fields.append({"label": "Vault", "value": os.path.basename(vault.rstrip("/"))})
+
+notes = []
+for root, dirs, files in os.walk(vault):
+    dirs[:] = [d for d in dirs if not d.startswith(".")]
+    notes += [os.path.join(root, f) for f in files if f.endswith(".md")]
+notes.sort(key=os.path.getmtime, reverse=True)
+
+blocks = [{"type": "fields", "rows": fields}]
+if notes:
+    blocks.append({
+        "type": "list",
+        "items": [{"label": os.path.basename(n)[:-3]} for n in notes[:3]],
+    })
+print(json.dumps(blocks))
