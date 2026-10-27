@@ -21,6 +21,15 @@ match   = ["*.md"]
 preview = "sed -n 1,80p {path}"
 then    = ["obsidian-open", "obsidian-append-daily"]
 
+# `obsnote invoice` lists only notes matching "invoice". Without this you get
+# every file and app on the machine that matches either word, which for a vault
+# of a few thousand notes is the difference between finding one and scrolling.
+#
+# It reserves "obsidian", "obsnote" and "vault" as the FIRST word of a line, so
+# every single-word alias costs something once a block is scoped. The blocks
+# below are unaffected: one that takes {arg} already owns its word.
+scope   = true
+
 # The id namespaces the rows; what you TYPE is the name and its aliases. They
 # are deliberately not "notes": that word collides with Notes.app, any file
 # called `notes.md`, and every other source someone installs. The name is also

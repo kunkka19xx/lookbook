@@ -5,8 +5,9 @@ note itself, and `newnote Meeting with Bob` creates one with that title. Opening
 and searching hand off to Obsidian; the listing and the preview are plain files
 on disk, so they work with Obsidian closed.
 
-**Requires.** Look v0.7.5 or newer (`{arg}` and `{path:url}`; on 0.7.4 they pass
-through as literal text and the note would be called `{arg:url}`), Obsidian, and
+**Requires.** Look v0.7.5 or newer (`{arg}`, `{path:url}` and `scope`; on 0.7.4
+the first two pass through as literal text and the note would be called
+`{arg:url}`), Obsidian, and
 the vault **opened once in Obsidian** so it knows the name the URIs use.
 `python3` for the preview script, which macOS ships.
 
@@ -47,6 +48,12 @@ Reload with `Cmd+Shift+;`.
   `Meeting with Bob` to the command, and the row shows the argument before you
   press Enter. `{query}` cannot do this: it means "the query that found this
   row", so a producer using it is reachable only through another block's `Cmd+K`.
+- **`scope = true`**, so `obsnote invoice` searches your notes instead of your
+  whole machine. A vault is the case that needs it: a few thousand files all
+  matching on the block name, against every app and folder that matches the same
+  word. It reserves `obsidian`, `obsnote` and `vault` as the first word of a
+  line, which is the cost, and the `{arg}` blocks below are unaffected because
+  one that takes an argument already owns its word.
 - **`{path:url}`**, percent-encoding for a command that builds a URL. Shell
   quoting protects the shell and does nothing for a query string, so a note
   called `Notes & ideas (draft).md` would otherwise end the URL early and open
