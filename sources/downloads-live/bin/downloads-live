@@ -44,8 +44,9 @@ push() {
 seen=""
 push_if_changed() {
     if [ ! -d "$DIR" ] || [ ! -r "$DIR" ]; then
-        # An `error` frame, not stderr: Look sends a connector's stderr to
-        # /dev/null, and this is the channel it does read and log.
+        # An `error` frame rather than stderr. Look logs both, but stderr is
+        # for the author's own tracing; an `error` is something the user has a
+        # reason to hear about, which a folder that went missing is.
         say --arg m "$DIR is not a readable folder; keeping the rows I sent" \
             '{op:"error",message:$m}'
         return 0
