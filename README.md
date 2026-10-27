@@ -122,6 +122,7 @@ The **Platforms** column is what the author tested, not what might work. Where a
 | [meeting](sources/meeting) | none       | `do` + `preview` for clock-dependent data that must not go stale | macOS                 |
 | [archives](sources/archives) | tar, zip, unzip | `applies`: a verb on rows the block did not produce, by `match` glob | Linux |
 | [images](sources/images) | oxipng, cwebp, ImageMagick | `applies` by `ext`, one block per tool that can actually act | Linux |
+| [downloads-live](sources/downloads-live) | bash, jq | `connect`: a program that stays running and pushes rows, and fills the preview | macOS, Linux |
 <!-- /index:sources -->
 
 ## The tiles

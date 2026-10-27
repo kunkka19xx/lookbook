@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# A connector: Look starts this once and leaves it running, and it pushes rows
+# whenever the folder changes. No reload, which is the whole reason `connect`
+# exists where `run` would do otherwise.
+#
+# One loop does both jobs. `read -t` waits for a frame from Look for a couple of
+# seconds; if none comes it falls through and re-reads the folder instead. One
+# loop means one writer on stdout, so two frames can never interleave.
+set -u
+
+readonly BLOCK="downloads-live"
+DIR="${LOOK_DOWNLOADS_DIR:-$HOME/Downloads}"
+EVERY="${LOOK_DOWNLOADS_POLL:-2}"
+readonly LIMIT=50
+
+# Every frame is built by jq, never by string-pasting: a file called
+# `Q3 "final".pdf` has to come out as valid JSON, and quoting that by hand in
+# shell is how a connector ends up sending a frame Look cannot read.
+say() { jq -cn "$@"; }
+
+# Newest first, capped. `ls -t` is the mtime order on both GNU and macOS.
+listing() { ls -t "$DIR" 2>/dev/null | head -n "$LIMIT"; }
+
+rows_json() {
+    listing | jq -R -s --arg dir "$DIR" '
+        split("\n") | map(select(length > 0)) |
+        map({ id: ($dir + "/" + .), title: ., path: ($dir + "/" + .) })'
+}
+
+push() {
+    local rows
+    rows="$(rows_json)" || return 0
+    say --arg b "$BLOCK" --argjson rows "$rows" '{op:"rows",block:$b,rows:$rows}'
+}
+
+# Only when something actually changed. Sending the same rows again is free on
+# Look's side, but every push makes it re-read the declared sources, so a timer
+# that pushes regardless is the one way this example could cost real work.
+#
+# And never push because the folder went missing. This is where `connect`
+# differs from `run`: a `run` block that prints nothing KEEPS the rows it had,
+# while an empty `rows` frame is a real answer that clears them. So an
+# unreadable folder has to be a push that does not happen, not an empty one.
+seen=""
+push_if_changed() {
+    if [ ! -d "$DIR" ] || [ ! -r "$DIR" ]; then
+        # An `error` frame, not stderr: Look sends a connector's stderr to
+        # /dev/null, and this is the channel it does read and log.
+        say --arg m "$DIR is not a readable folder; keeping the rows I sent" \
+            '{op:"error",message:$m}'
+        return 0
+    fi
+    local now
+    now="$(listing | cksum)"
+    [ "$now" = "$seen" ] && return 0
+    seen="$now"
+    push
+}
+
+# `req` is echoed back exactly as it arrived. Look uses it to tell this answer
+# from the one before it; an answer without it is dropped.
+preview() {
+    local id="$1" req="$2" text
+    text="$(
+        printf '# %s\n\n' "$(basename "$id")"
+        if [ -e "$id" ]; then
+            printf '%s\n\n' "$(ls -lh "$id" | awk '{print $5, "  ", $6, $7, $8}')"
+            file -b "$id" 2>/dev/null
+        else
+            printf 'Gone since the list was sent.\n'
+        fi
+    )"
+    say --arg b "$BLOCK" --arg id "$id" --argjson req "$req" --arg text "$text" \
+        '{op:"preview",block:$b,id:$id,req:$req,content_type:"markdown",text:$text}'
+}
+
+field() { printf '%s' "$1" | jq -r "$2 // empty" 2>/dev/null; }
+
+while :; do
+    if IFS= read -r -t "$EVERY" line; then
+        case "$(field "$line" .op)" in
+            hello)
+                say '{op:"ready",capabilities:["rows","preview"]}'
+                push_if_changed
+                ;;
+            preview)
+                req="$(field "$line" .req)"
+                id="$(field "$line" .id)"
+                [ -n "$req" ] && [ -n "$id" ] && preview "$id" "$req"
+                ;;
+            bye) exit 0 ;;
+            # An op this program does not know is ignored, never fatal. Look
+            # holds itself to the same rule in the other direction.
+            *) ;;
+        esac
+    elif [ "$?" -le 128 ]; then
+        # Not a timeout: stdin closed, so Look is gone and so are we.
+        exit 0
+    else
+        push_if_changed
+    fi
+done
