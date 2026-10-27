@@ -13,7 +13,11 @@ One folder here is one topic, holding a README and one or more `.toml` files you
 
 New to either? The [sources format guide](https://github.com/kunkka19xx/look/blob/main/docs/user-sources.md) and the [Super Actions section](https://github.com/kunkka19xx/look/blob/main/docs/user-guide.md#super-actions) of the user guide are both short.
 
-> **Sources need Look v0.6.12 or newer**, tiles and `applies` need **v0.6.13**. Earlier builds ignore what they do not know about, so nothing appears and nothing is reported. Not released yet: [build from source](https://github.com/kunkka19xx/look/blob/main/DEVELOPMENT.md) to try these today.
+> **Each example names the Look version it needs**, in its own README. Sources
+> need v0.6.12, tiles and `applies` need v0.6.13, and `scope` and `connect` need
+> **v0.7.5**, which is not released yet: [build from source](https://github.com/kunkka19xx/look/blob/main/DEVELOPMENT.md)
+> for those two. An older build ignores a key it does not know, so the example
+> looks broken when it is fine.
 
 **_Tmux source in action_**  
 ![tmux](./sources/tmux/open-in-tmux.gif)
@@ -33,7 +37,8 @@ flowchart LR
         B2["<b>dir</b><br/>one row per child"]
         B3["<b>file</b><br/>one row per line"]
         B4["<b>run</b><br/>one row per line printed"]
-        B1 ~~~ B2 ~~~ B3 ~~~ B4
+        B5["<b>connect</b><br/>a program that keeps running<br/>and pushes rows"]
+        B1 ~~~ B2 ~~~ B3 ~~~ B4 ~~~ B5
     end
 
     P --> S["rows in Look,<br/>ranked by use"]
@@ -41,12 +46,13 @@ flowchart LR
     S -->|"Cmd / Ctrl + K"| T["<b>then</b> drills down,<br/>or acts on the row"]
 ```
 
-Four things the picture leaves out:
+Five things the picture leaves out:
 
 - **A file holds as many blocks as you like**, one producer each. `sources/docker` is one file with three: a `run` block listing containers, and two `do` blocks it reaches with `then`.
 - **A path row can do more than a text row.** `dir` rows are real filesystem objects, so `{path}`, `Cmd+E`, `Cmd+T` and `Cmd+F` work and Enter opens the folder with no `open` declared. `file` and `run` rows are text: give them an `open`, or `format = "json"` to carry a path and a per-row icon.
 - **Every step is shell text**, run through your login shell (`$SHELL -lc`, or `cmd /D /S /C` on Windows), so `&&`, `|`, `>`, `$VAR` and globs work. That is a *non-interactive* shell: it never reads `~/.zshrc`, so a `PATH` entry or alias living there is missing, move it to `~/.zshenv`, or name the binary in full. fish and nu are passed over for `/bin/sh`. A script can read `LOOK_ID`, `LOOK_TITLE` and `LOOK_PATH` instead of taking arguments.
-- **A producer that names a placeholder is not a top-level row.** `run = "git -C {path} branch"` means nothing with no project selected, so Look indexes it only as another block's `then` target.
+- **A producer that names a placeholder is not a top-level row.** `run = "git -C {path} branch"` means nothing with no project selected, so Look indexes it only as another block's `then` target. The producer is the `do` / `dir` / `file` / `run` line **and its `cwd`**; `open`, `preview` and the other verbs do not count, because those already act on a row the block produced.
+- **A producer counts one level differently from a command.** While a block is *producing* rows, the row you drilled in from *is* the row, so its `run` line says `{path}`. The commands that then act on a row it produced are one level further out, so there the same project is `{parent.path}`. [git](sources/git) is both lines in one block.
 
 In a real file: `[dev-projects]` is the block, `dir = "~/dev"` is the producer that turns your folders into rows, and `edit = "code {path}"` is what one of those rows does on `Cmd+E`.
 
