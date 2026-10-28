@@ -12,7 +12,12 @@ depth   = 1                        # 1 = immediate children
 only    = "dirs"
 exclude = ["archive*", "node_modules"]
 
-aliases = ["repo", "proj", "code"]
+# `scope = true` makes the first word of a line narrow to this block, so
+# `projects look` lists only your projects matching "look". Every single-word
+# name and alias becomes one of those openers, which is why "code" is gone:
+# it would have reserved the word your editor is called.
+aliases = ["repo", "proj"]
+scope   = true
 
 # Cmd+E on a project. Declare only what differs from your global editor.
 edit = "code {path}"

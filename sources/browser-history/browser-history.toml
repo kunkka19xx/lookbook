@@ -13,7 +13,16 @@ name    = "Browser history"
 icon    = "🌐"
 format  = "json"
 timeout = "20s"
-aliases = ["history", "web", "url", "browser"]
+# `scope = true` reserves every single-word name and alias as the FIRST word of
+# a line: `history github` lists only these rows, matching "github" inside them.
+# That is what you want for a block this long, since the row budget is shared
+# and a plain search for "github" has your files and apps in it too.
+#
+# It is also why "web" and "url" are gone from the aliases. Each one would have
+# become a reserved opener, so "url encode" would have searched your history
+# instead of your machine. An alias costs more once a block is scoped.
+aliases = ["history", "browser"]
+scope   = true
 
 # Every browser whose profiles exist. Narrow it to one, and the history you can
 # reach goes back further: the row budget is shared across whatever is merged.

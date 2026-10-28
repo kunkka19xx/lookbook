@@ -7,7 +7,9 @@ Firefox and the Chromium browsers are read together and de-duplicated by URL, so
 <img width="1139" height="816" alt="image" src="https://github.com/user-attachments/assets/f63f9f61-0b83-4548-96e4-cc62a47156ed" />
 
 
-**Requires.** Look v0.6.12 or newer, and the `sqlite3` command on your `PATH`. At least one of Firefox, Brave, Chrome, Chromium, Edge or Vivaldi.
+**Requires.** Look v0.7.5 or newer (for `scope`; on 0.7.4 the key is reported
+and ignored, and everything else here still works), and the `sqlite3` command
+on your `PATH`. At least one of Firefox, Brave, Chrome, Chromium, Edge or Vivaldi.
 
 The binary is always `sqlite3`; the package often is not. macOS ships it at `/usr/bin/sqlite3` and needs nothing installed. Debian and Ubuntu call the package `sqlite3`; Arch, Fedora and nixpkgs call it `sqlite`. A language binding is not a substitute: this uses `readfile()` and `writefile()`, which exist only in the command-line shell and not in the library every binding wraps.
 
@@ -34,6 +36,17 @@ Reload with `Cmd+Shift+;` (macOS) or `Ctrl+Shift+;` (Linux, Windows).
 | Block | Lists | Enter |
 | --- | --- | --- |
 | `browser-history` | pages from every browser profile found | opens the URL in your default browser |
+
+## Narrowing to just your history
+
+History is the longest list in this repo, and a plain search for "github" has
+your files, apps and settings in it too. `scope = true` reserves `history` and
+`browser` as the first word of a line, so `history github` matches only inside
+these rows. The word alone is an ordinary search.
+
+Every single-word alias becomes one of those reserved openers, which is why
+`web` and `url` were dropped: `url encode` would have searched your history
+instead of your machine. Drop `scope` if you would rather have the words back.
 
 ## Customise
 
