@@ -44,9 +44,8 @@ push() {
 seen=""
 push_if_changed() {
     if [ ! -d "$DIR" ] || [ ! -r "$DIR" ]; then
-        # An `error` frame rather than stderr. Look logs both, but stderr is
-        # for the author's own tracing; an `error` is something the user has a
-        # reason to hear about, which a folder that went missing is.
+        # An `error` frame rather than stderr. Look logs both the same way and
+        # shows neither to the user; this says it in the protocol.
         say --arg m "$DIR is not a readable folder; keeping the rows I sent" \
             '{op:"error",message:$m}'
         return 0

@@ -53,7 +53,7 @@ The `req` is echoed back exactly as it arrived. It is how Look tells this answer
 - **Every frame is built by `jq`, never pasted together.** A file called `Q3 "final".pdf` has to come out as valid JSON. Quoting that by hand in shell is the classic way to send a frame Look cannot parse.
 - **An unreadable folder is a push that does not happen.** This is the one place `connect` differs from `run` in a way that can lose you data: a `run` block that prints nothing *keeps* the rows it had, but an empty `rows` frame is a real answer and **clears** them. So the script checks the folder is readable first, and reports through an `error` frame rather than just pushing an empty list.
 
-Look logs a connector's stderr too, each line prefixed with the block that wrote it, so `echo "..." >&2` is there for your own tracing. An `error` frame is the one to use when the user has a reason to hear about it.
+Look logs a connector's stderr too, each line prefixed with the block that wrote it, so `echo "..." >&2` works for tracing. An `error` frame lands in the same log and is no more visible, so neither reaches the person using Look; both are for whoever launched it from a terminal. The frame is used here only because it says it in the protocol rather than alongside it.
 
 ## Customise
 
