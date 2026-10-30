@@ -90,6 +90,36 @@ Name **only the ones you actually ran it on** — not the ones you assume, and n
 
 This matters more here than in most repos, because the commands are the example. Someone on Windows reading "macOS, Linux" knows to expect work; reading "macOS, Linux, Windows" from a guess wastes their evening. If you cannot test an OS, say so and let someone who has one send the variant.
 
+## Say the same thing again in meta.toml
+
+A source also carries a `meta.toml`. That file is what Look reads to list these
+from inside the app, so it is the same facts as your README's first lines, said
+where a program can read them:
+
+```toml
+name        = "Dev projects"
+description = "Every folder in ~/dev as a row."
+platforms   = ["macos", "linux", "windows"]
+look        = "0.6.12"
+requires    = ["code"]
+```
+
+`make new` writes one for you. Two of the five are worth a second's thought:
+
+- **`platforms`** means *as written*. Leave out a platform that needs a line
+  changed first. It is what decides whether your example is offered to someone
+  at all, so a generous guess here wastes exactly the evening the section above
+  is about.
+- **`requires`** lists programs the example cannot work without, spelled as you
+  would type them. It exists to say "you do not have `docker`" *before*
+  installing, and it earns its place for things your blocks never name, which
+  is usually whatever your `bin/` script runs. Per-verb extras the rest works
+  without belong in the README.
+
+Everything else in a catalog entry is derived from the folder, so there is
+nothing to keep in step by hand. Run `make index` after adding or editing a
+source; `make check` fails when you forget.
+
 ## Link a GIF, do not commit it
 
 A GIF of your example in use is welcome. Put it somewhere else and link it:

@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "Archives"
+description = "Unpack here on any archive, and compress any folder to tar.gz, ZIP or RAR."
+platforms   = ["linux", "macos"]
+look        = "0.6.13"
+requires    = ["tar"]
