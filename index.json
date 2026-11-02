@@ -65,7 +65,7 @@
       "bin": [],
       "readme": "sources/dev-projects/README.md",
       "path": "sources/dev-projects/",
-      "hash": "sha256:9d84c1afcc53e1ad4f4b7282b9f5407958fa22bcdfd34f5baf09a9a843110d87"
+      "hash": "sha256:08d0fe0c30bbbf510c714d8beb149e154b18bf82648244fb44c4a3a841368934"
     },
     {
       "id": "docker",
@@ -169,7 +169,7 @@
       "bin": [],
       "readme": "sources/ssh/README.md",
       "path": "sources/ssh/",
-      "hash": "sha256:97b1b93cdc9f730f8ce74ea1327d0cbb4b7285a8b2c390c7c7f1acf6fe85d872"
+      "hash": "sha256:7e51bee0712139e82afb1c4a466557852b7d735e1eaeb24aec9ac5a8cffe83a7"
     },
     {
       "id": "systemd",
