@@ -13,3 +13,12 @@ run  = "awk '/^[Hh]ost / { for (i = 2; i <= NF; i++) if ($i !~ /[*?]/) print $i 
 
 # Opens a terminal and connects. macOS + Ghostty as written; see the README.
 open = "open -na Ghostty --args -e ssh {id}"
+
+[[setup]]
+label = "Your terminal"
+type  = "choice"
+block = "ssh-hosts"
+key   = "open"
+match = "Ghostty"
+options = ["Ghostty", "Alacritty", "kitty", "WezTerm", "iTerm", "Terminal"]
+note  = "Opened with `open -na`, so it is the app name as it appears in /Applications."
