@@ -20,6 +20,10 @@ readonly INDEX="index.json"
 # What Look resolves a relative path against. Pinned to a branch on purpose: a
 # published catalog entry has to keep meaning the same thing.
 readonly BASE="https://raw.githubusercontent.com/kunkka19xx/lookbook/main/"
+# The same files as pages a person can read. `base` serves raw bytes, which is
+# right for a .toml Look is about to parse and wrong for a README someone
+# clicked to read: GitHub renders this one, images, anchors and all.
+readonly WEB="https://github.com/kunkka19xx/lookbook/blob/main/"
 
 # A scalar: name = "Dev projects" -> Dev projects
 scalar() {
@@ -70,6 +74,7 @@ generate() {
     printf '{\n'
     printf '  "version": 1,\n'
     printf '  "base": "%s",\n' "$BASE"
+    printf '  "web": "%s",\n' "$WEB"
     printf '  "sources": [\n'
 
     local first=1 dir id meta

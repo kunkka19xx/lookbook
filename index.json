@@ -1,6 +1,7 @@
 {
   "version": 1,
   "base": "https://raw.githubusercontent.com/kunkka19xx/lookbook/main/",
+  "web": "https://github.com/kunkka19xx/lookbook/blob/main/",
   "sources": [
     {
       "id": "archives",
