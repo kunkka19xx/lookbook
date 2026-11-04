@@ -73,6 +73,14 @@ rename() {
 rename "$template_toml" > "$dir/$name.toml"
 rename "$template_readme" > "$dir/README.md"
 
+# A source also owes the catalog an entry. Scaffolded here because `make index`
+# refuses a source without one, and finding that out later is worse than
+# filling in a line now. Tiles are not in the catalog: they are pasted into a
+# layout file by hand, not installed.
+if [ "$kind" = "source" ]; then
+    rename "$TEMPLATE_DIR/meta.toml" > "$dir/meta.toml"
+fi
+
 # NOTES.md is the instructions for copying the template, not part of an example.
 
 # The index row, which check.sh requires. Added here so a new example is

@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "Shortcuts"
+description = "Every shortcut from the Shortcuts app, as rows."
+platforms   = ["macos"]
+look        = "0.6.12"
+requires    = []

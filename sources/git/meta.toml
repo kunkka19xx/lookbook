@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "Git branches and worktrees"
+description = "Branches and worktrees of whichever project you have selected."
+platforms   = ["macos", "linux", "windows"]
+look        = "0.6.12"
+requires    = ["git"]

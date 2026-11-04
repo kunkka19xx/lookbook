@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "Next meeting"
+description = "Your next meeting as one row. Enter joins it."
+platforms   = ["macos"]
+look        = "0.6.12"
+requires    = ["sqlite3"]

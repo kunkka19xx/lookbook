@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "Close windows"
+description = "One row that ends the day: everything you have open goes away."
+platforms   = ["linux", "macos"]
+look        = "0.6.12"
+requires    = []

@@ -155,6 +155,19 @@ fi
 
 # Named, and it exists in one place or the other, so asking for one kind by
 # name simply yields nothing from the other.
+# A source's declarations: every .toml in it except meta.toml, which is catalog
+# data for `make index` rather than something Look reads. Sets `tomls`, the
+# name every caller already used for this.
+declarations() {
+    local toml
+    tomls=()
+    for toml in "$1"*.toml; do
+        [ -e "$toml" ] || continue
+        [ "$(basename "$toml")" = "meta.toml" ] && continue
+        tomls+=("$toml")
+    done
+}
+
 examples() {
     if [ -n "$only" ]; then
         [ -d "$SOURCES_DIR/$only" ] && printf '%s\n' "$SOURCES_DIR/$only/"
@@ -255,8 +268,8 @@ while read -r dir; do
     name="$(basename "$dir")"
     printf '%s\n' "$name"
 
-    tomls=("$dir"*.toml)
-    if [ ! -e "${tomls[0]}" ]; then
+    declarations "$dir"
+    if [ "${#tomls[@]}" -eq 0 ]; then
         fail "$name has no .toml file"
         continue
     fi
@@ -341,8 +354,8 @@ while read -r dir; do
     name="$(basename "$dir")"
     printf '%s\n' "$name"
 
-    tomls=("$dir"*.toml)
-    if [ ! -e "${tomls[0]}" ]; then
+    declarations "$dir"
+    if [ "${#tomls[@]}" -eq 0 ]; then
         fail "$name has no .toml file"
         continue
     fi
@@ -454,7 +467,8 @@ echo
 #    A duplicate id or a `then` naming a block nobody declares shows up here.
 all="$WORK_DIR/all"
 mkdir -p "$all"
-find "$SOURCES_DIR" -mindepth 2 -maxdepth 2 -name '*.toml' -exec cp {} "$all/" \;
+find "$SOURCES_DIR" -mindepth 2 -maxdepth 2 -name '*.toml' ! -name 'meta.toml' \
+    -exec cp {} "$all/" \;
 
 echo "every example installed together"
 combined="$("$parser" "$all")"
@@ -477,8 +491,8 @@ echo
 echo "commands"
 read_count=0
 while read -r dir; do
-    tomls=("$dir"*.toml)
-    [ -e "${tomls[0]}" ] || continue
+    declarations "$dir"
+    [ "${#tomls[@]}" -ne 0 ] || continue
 
     # Helper scripts get the same reading. A hard-coded home directory or a
     # curl-into-a-shell is no better for being one file further away.
@@ -634,6 +648,22 @@ printf '  ok    %s file(s), index tables match %s/ and %s/\n' \
     "$(find "$SOURCES_DIR" "$TILES_DIR" -type f | wc -l | tr -d ' ')" "$SOURCES_DIR" "$TILES_DIR"
 
 echo
+
+# 6. The catalog Look lists these from.
+#
+# Generated, so the only way it can be wrong is by being stale: a source added
+# or a sentence edited without `make index`. Skipped for a single-example run,
+# since index.json covers all of them and one cannot say whether it is current.
+if [ -z "$only" ]; then
+    echo "catalog"
+    if catalog_output="$(CHECK=1 ./scripts/index.sh 2>&1)"; then
+        printf '  ok    %s\n' "$catalog_output"
+    else
+        printf '%s\n' "$catalog_output" | sed 's/^/  /'
+        fail "index.json does not match sources/"
+    fi
+    echo
+fi
 
 if [ "$failures" -gt 0 ]; then
     printf '%s check(s) failed\n' "$failures"

@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "Images"
+description = "Optimise, convert to WebP, or copy the dimensions of any picture Look found."
+platforms   = ["linux"]
+look        = "0.6.13"
+requires    = []

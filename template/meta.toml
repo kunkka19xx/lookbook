@@ -1,0 +1,20 @@
+# What the catalog shows before you install this. `make index` reads it, and
+# `make check` fails when index.json no longer matches.
+#
+# Everything else in the entry is derived from the folder: which .toml files it
+# holds, which bin/ scripts, and a hash of both.
+
+name        = "Template"
+description = "One sentence, said to someone deciding whether to install it."
+
+# Where it works AS WRITTEN. Leave out a platform that needs a line changed
+# first: this is what decides whether it is offered to someone at all.
+platforms   = ["macos", "linux", "windows"]
+
+# The oldest Look that runs it. 0.6.13 if it uses `applies`.
+look        = "0.6.12"
+
+# Programs it cannot work without, as typed on a command line, so Look can say
+# "you do not have this" before installing. Per-verb extras that the rest works
+# without belong in the README instead.
+requires    = []
