@@ -1,0 +1,29 @@
+# Your Downloads folder as rows that update themselves.
+#
+# `connect` is the one producer that does not run and finish. Look starts this
+# program once and leaves it running, and the program pushes rows whenever the
+# folder changes. A `run` block doing the same thing would show you whatever was
+# there at the last reload.
+#
+# The work is in bin/downloads-live, which is the part worth reading: it is a
+# whole connector in about sixty lines of bash.
+
+[downloads-live]
+name = "Downloads (live)"
+icon = "📥"
+
+# `~` is expanded by your shell, as in any other command. On Windows write
+# %USERPROFILE%\.look\bin\downloads-live instead: cmd has no tilde expansion.
+connect = "~/.look/bin/downloads-live"
+
+# `scope = true` reserves "downloads" as the first word of a line, so
+# `downloads invoice` matches only inside this folder.
+aliases = ["downloads", "dl"]
+scope   = true
+
+# No `open` on purpose. Every row carries a `path`, so Enter opens the file the
+# way Look opens any file, and Cmd+E / Cmd+T / Cmd+F keep working too.
+#
+# No `preview` either, for the opposite reason: declaring one here would run a
+# command instead of asking the program, and the program is already answering
+# with the size, the date and what `file` makes of it.

@@ -25,7 +25,7 @@ make uninstall NAME=tmux
 
 There is deliberately **no `make install` for a tile.** `~/.look/super-actions.toml` is the user's own layout, and a script that edited it would be rearranging their strip. Installing one is two edits they make by hand: the tile's name into the `layout` drawing, and the block onto the end.
 
-> **Sources need Look v0.6.12 or newer to test; tiles and `applies` need v0.6.13.** An older build ignores what it does not know about, so your example looks broken when it is fine.
+> **Sources need Look v0.6.12 or newer to test; tiles and `applies` need v0.6.13; `scope` and `connect` need v0.7.5.** An older build ignores what it does not know about, so your example looks broken when it is fine. `check.sh` pins to the latest *release*, so an example using an unreleased key fails there until the tag exists: write it against `LOOK_REF=main` and say the version in its README.
 
 ```
 sources/git/                tiles/lock/
