@@ -1,0 +1,86 @@
+# Your Obsidian vault in Look: notes as rows, and a note created from what you
+# typed.
+#
+# EDIT THE TWO LINES MARKED `vault` BELOW. The path is where the vault lives on
+# disk; the name is what Obsidian calls it, which is the folder's own name and
+# what every `obsidian://` URI needs. They are separate because Look reads the
+# files and Obsidian answers the URIs.
+#
+# The notes are plain files on disk, so the listing, the preview and Cmd+K cost
+# nothing and work with Obsidian closed. Only the actions need it running.
+
+[obsidian]
+name    = "Obsidian"
+aliases = ["obsnote", "vault"]
+icon    = "📝"
+# vault: the folder.
+dir     = "~/Documents/notes"
+depth   = 4
+only    = "files"
+match   = ["*.md"]
+preview = "sed -n 1,80p {path}"
+then    = ["obsidian-open", "obsidian-append-daily"]
+
+# `obsnote invoice` lists only notes matching "invoice". Without this you get
+# every file and app on the machine that matches either word, which for a vault
+# of a few thousand notes is the difference between finding one and scrolling.
+#
+# It reserves "obsidian", "obsnote" and "vault" as the FIRST word of a line, so
+# every single-word alias costs something once a block is scoped. The blocks
+# below are unaffected: one that takes {arg} already owns its word.
+scope   = true
+
+# The id namespaces the rows; what you TYPE is the name and its aliases. They
+# are deliberately not "notes": that word collides with Notes.app, any file
+# called `notes.md`, and every other source someone installs. The name is also
+# the subtitle under each row, so it has to read well there too.
+
+# `{path:url}` percent-encodes, which shell quoting cannot do for a URL: an `&`
+# in a filename ends the query string whatever the shell thinks, so a note
+# called `Notes & ideas (draft).md` would open the wrong thing or nothing.
+[obsidian-open]
+name = "Open in Obsidian"
+icon = "🔗"
+do   = ["open -g \"obsidian://open?path={path:url}\""]
+
+# `applies` puts this on ANY markdown row, including files Look found itself,
+# not just the ones this source produced.
+[obsidian-append-daily]
+name    = "Append to daily note"
+icon    = "➕"
+applies = { ext = ["md"] }
+# vault: the folder, again.
+do      = ["mkdir -p ~/Documents/notes/Daily && printf -- '- [[%s]]\\n' {title} >> ~/Documents/notes/Daily/$(date +%F).md"]
+
+# `{arg}` is the rest of the line after the word that named the block, so this
+# stays a row you can reach directly: type `newnote Meeting with Bob`. `{query}`
+# would NOT work here - it means "the query that found this row", so a producer
+# using it is reachable only through another block's Cmd+K.
+#
+# The preview script turns that argument into the panel: where the note will
+# land, and whether a note by that name already exists.
+[obsidian-new]
+name    = "New note"
+aliases = ["newnote", "nn"]
+icon    = "🆕"
+preview = "~/.look/bin/note-preview ~/Documents/notes {arg}"
+do      = ["open -g \"obsidian://new?vault=notes&name={arg:url}\""]
+
+# Obsidian's own search, which Look cannot reach: it has its own index, its own
+# query syntax and its own backlinks.
+[obsidian-search]
+name    = "Search in Obsidian"
+aliases = ["searchnote"]
+icon    = "🔍"
+do      = ["open -g \"obsidian://search?vault=notes&query={arg:url}\""]
+
+# A `file=` URI for a note that does not exist opens nothing, so the file is
+# created first. Two steps, run in order.
+[obsidian-daily]
+name    = "Daily note"
+aliases = ["obsdaily"]
+icon    = "📅"
+do      = [
+  "mkdir -p ~/Documents/notes/Daily && touch ~/Documents/notes/Daily/$(date +%F).md",
+  "open -g \"obsidian://open?vault=notes&file=Daily/$(date +%F)\"",
+]
