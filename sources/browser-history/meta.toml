@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "Browser history"
+description = "Your browser history as rows, most recent first, each with the site's favicon."
+platforms   = ["linux", "macos"]
+look        = "0.6.12"
+requires    = ["sqlite3"]

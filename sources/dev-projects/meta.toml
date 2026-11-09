@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "Dev projects"
+description = "Every folder in ~/dev as a row."
+platforms   = ["macos", "linux", "windows"]
+look        = "0.6.12"
+requires    = []

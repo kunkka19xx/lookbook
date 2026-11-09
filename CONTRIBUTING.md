@@ -74,6 +74,32 @@ The rest is judgement, not a form to fill in. The things that actually bite:
 
 For a **tile**, three more. Its `value` command has to finish in **under two seconds on a cold machine**, not just on yours; past that it is killed and the tile keeps its last good reading. It declares no `layout` — the drawing belongs to the user's file, so ship the `[tiles.<name>]` block alone. And `icon` is labelled per platform, since an SF Symbol name means nothing on Linux and an unrecognised name draws nothing at all.
 
+## Ask for what is personal
+
+Look can tell that a folder is missing or a program is not installed. It cannot tell that `~/dev` is your projects folder or that `Ghostty` is your terminal: those lines are valid, they work on your machine, and they do nothing on somebody else's. You are the only one who knows which lines those are, so say so with a `[[setup]]` field, and the installer inside Look asks for the value before it writes the file.
+
+```toml
+[[setup]]
+label = "Your projects folder"
+type  = "folder"
+block = "dev-projects"
+key   = "dir"
+
+[[setup]]
+label = "Editor"
+block = "dev-projects"
+key   = "edit"
+match = "code"
+note  = "What Cmd+E runs."
+```
+
+- **It points at a real value, never a placeholder.** The file keeps working copied in by hand, and nothing ships half-finished. A Look older than the field logs one line about it and loads the blocks anyway.
+- **`type`** is `folder` or `file` for a picker, `text` (the default) for a box, `choice` for a list; a `choice` needs `options`, and the value as written has to be one of them.
+- **`match`** names the part of the value to replace when it is one word inside a command. It has to appear in that value exactly once; without it the field replaces the whole value, which then has to be a string.
+- **One field per line that is personal.** A terminal named in two blocks is two fields, each with a label saying which.
+
+`make check` fails a field whose block or key is not there, whose `match` is not unique, or whose `choice` does not list the current value.
+
 ## Say which platforms it works on
 
 Every example README needs this line, and the checker fails without it:
@@ -89,6 +115,36 @@ Name **only the ones you actually ran it on** — not the ones you assume, and n
 ```
 
 This matters more here than in most repos, because the commands are the example. Someone on Windows reading "macOS, Linux" knows to expect work; reading "macOS, Linux, Windows" from a guess wastes their evening. If you cannot test an OS, say so and let someone who has one send the variant.
+
+## Say the same thing again in meta.toml
+
+A source also carries a `meta.toml`. That file is what Look reads to list these
+from inside the app, so it is the same facts as your README's first lines, said
+where a program can read them:
+
+```toml
+name        = "Dev projects"
+description = "Every folder in ~/dev as a row."
+platforms   = ["macos", "linux", "windows"]
+look        = "0.6.12"
+requires    = ["code"]
+```
+
+`make new` writes one for you. Two of the five are worth a second's thought:
+
+- **`platforms`** means *as written*. Leave out a platform that needs a line
+  changed first. It is what decides whether your example is offered to someone
+  at all, so a generous guess here wastes exactly the evening the section above
+  is about.
+- **`requires`** lists programs the example cannot work without, spelled as you
+  would type them. It exists to say "you do not have `docker`" *before*
+  installing, and it earns its place for things your blocks never name, which
+  is usually whatever your `bin/` script runs. Per-verb extras the rest works
+  without belong in the README.
+
+Everything else in a catalog entry is derived from the folder, so there is
+nothing to keep in step by hand. Run `make index` after adding or editing a
+source; `make check` fails when you forget.
 
 ## Link a GIF, do not commit it
 
@@ -141,7 +197,7 @@ make check NAME=tmux      # just the one you are working on
 
 It borrows Look's own parsers, built from a checkout **pinned to Look's latest release tag**, so it catches exactly what Look would: unknown keys, a block with no producer, a dangling `then`, a duplicate id, a bad glob. Then it re-reads the rules above back to you — a hard-coded home directory, a quoted placeholder, a `curl` into a shell, a missing **Requires** or **Platforms** line, a block your README never mentions, the `TODO` row `make new` left in the index, a committed GIF. For a tile it also synthesizes a `layout` naming everything the file declares, so a tile that parses but cannot be placed fails here rather than on someone's strip. The same script runs in CI.
 
-Because the pin is a release and not `main`, a key that has not shipped yet fails here by name, which is how the **Requires** line in your README stays true. Writing an example for something unreleased is the one case to override it:
+Because the pin is a release and not `main`, a key that has not shipped yet fails here by name, which is how the **Requires** line in your README stays true. The one exception is `[[setup]]`: a Look older than it loads the blocks and skips the questions, so the checker notes it rather than failing, and validates the fields once the pin knows them. Writing an example for something unreleased is the one case to override it:
 
 ```bash
 LOOK_REF=main make check

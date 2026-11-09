@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "Homebrew"
+description = "What brew would upgrade, and every background service it manages."
+platforms   = ["macos"]
+look        = "0.6.12"
+requires    = ["brew", "jq"]

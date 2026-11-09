@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "Work setup"
+description = "One row that opens every app and page you start the day with."
+platforms   = ["macos"]
+look        = "0.6.12"
+requires    = []

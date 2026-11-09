@@ -47,3 +47,17 @@ name    = "Delete"
 icon    = "🗑️"
 confirm = "Delete {title}?"
 do      = ["rm {path}"]
+
+# Asked by the installer: where your screenshots land, and what opens one.
+[[setup]]
+label = "Screenshots folder"
+type  = "folder"
+block = "niri-screenshots"
+key   = "dir"
+
+[[setup]]
+label = "Image viewer"
+block = "niri-screenshots-view"
+key   = "do"
+match = "feh --scale-down --auto-zoom"
+note  = "Runs after `niri msg action spawn --` with the file appended: `imv`, `swayimg`, `gwenview`."
