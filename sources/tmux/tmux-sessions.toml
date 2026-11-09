@@ -28,3 +28,12 @@ open    = "ghostty -e tmux attach -t \\={id}"
 # renames a window after whatever runs in it, so the two columns said the same
 # thing twice.
 preview = "tmux list-windows -t \\={id} -F '#{window_index}#{?window_active,*, }  #{window_name}'"
+
+# Asked by the installer. The flag comes with the terminal, which is why the
+# field covers both words.
+[[setup]]
+label = "Terminal command"
+block = "tmux-sessions"
+key   = "open"
+match = "ghostty -e"
+note  = "The terminal and the flag that runs a command in it: `kitty`, `wezterm start --`, `gnome-terminal --`."

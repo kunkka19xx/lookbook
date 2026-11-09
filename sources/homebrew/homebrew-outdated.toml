@@ -58,3 +58,22 @@ do      = ["open -na Ghostty --args -e brew upgrade"]
 name = "Open homepage"
 icon = "🌐"
 do   = ["brew home {id}"]
+
+# Asked by the installer. Two fields because the terminal is named twice: once
+# for one package, once for the lot.
+[[setup]]
+label = "Terminal for one upgrade"
+type  = "choice"
+block = "homebrew-outdated"
+key   = "open"
+match = "Ghostty"
+options = ["Ghostty", "Alacritty", "kitty", "WezTerm", "iTerm", "Terminal"]
+note  = "Opened with `open -na`, so it is the app name as it appears in /Applications."
+
+[[setup]]
+label = "Terminal for Upgrade everything"
+type  = "choice"
+block = "homebrew-outdated-all"
+key   = "do"
+match = "Ghostty"
+options = ["Ghostty", "Alacritty", "kitty", "WezTerm", "iTerm", "Terminal"]

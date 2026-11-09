@@ -53,3 +53,12 @@ do      = ["systemctl --user stop {id}"]
 [systemd-units-start]
 name = "Start service"
 do   = ["systemctl --user start {id}"]
+
+# Asked by the installer. The flag comes with the terminal, which is why the
+# field covers both words.
+[[setup]]
+label = "Terminal command"
+block = "systemd-units"
+key   = "open"
+match = "ghostty -e"
+note  = "The terminal and the flag that runs a command in it: `kitty`, `wezterm start --`, `gnome-terminal --`."

@@ -16,3 +16,21 @@ aliases = ["repo", "proj", "code"]
 
 # Cmd+E on a project. Declare only what differs from your global editor.
 edit = "code {path}"
+
+# What the installer asks you, so the two lines above arrive already pointing
+# at your machine instead of the author's. Each field names a real value, so
+# this file still works as written if you copy it in by hand.
+
+[[setup]]
+label = "Your projects folder"
+type  = "folder"
+block = "dev-projects"
+key   = "dir"
+note  = "The folder whose children become rows. One level deep."
+
+[[setup]]
+label = "Editor command"
+block = "dev-projects"
+key   = "edit"
+match = "code"
+note  = "What Cmd+E runs. nvim, hx, subl, or whatever you use."

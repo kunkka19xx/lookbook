@@ -65,7 +65,7 @@
       "bin": [],
       "readme": "sources/dev-projects/README.md",
       "path": "sources/dev-projects/",
-      "hash": "sha256:9d84c1afcc53e1ad4f4b7282b9f5407958fa22bcdfd34f5baf09a9a843110d87"
+      "hash": "sha256:08d0fe0c30bbbf510c714d8beb149e154b18bf82648244fb44c4a3a841368934"
     },
     {
       "id": "docker",
@@ -78,7 +78,7 @@
       "bin": ["docker-rows"],
       "readme": "sources/docker/README.md",
       "path": "sources/docker/",
-      "hash": "sha256:3f7cd6ac989d37a407a97a5fb8760d030e016f58b616ef822d6837244c2163ea"
+      "hash": "sha256:54249bfbfd07b8a948e9e8658d12d8b3e98d084441811c6b21d89c29db5cbe24"
     },
     {
       "id": "git",
@@ -91,7 +91,7 @@
       "bin": [],
       "readme": "sources/git/README.md",
       "path": "sources/git/",
-      "hash": "sha256:befd97503229096c1435ce61187ce6b7f5756b8fbdfabc30dcb4fd9d4b30d226"
+      "hash": "sha256:9cbe0ebde0d1fbb7145f2c83e1f56b92fa09f4c9daf545b6dd1e43433ed0f15b"
     },
     {
       "id": "homebrew",
@@ -104,7 +104,7 @@
       "bin": [],
       "readme": "sources/homebrew/README.md",
       "path": "sources/homebrew/",
-      "hash": "sha256:4d2b628ddef79900c9260dcc4db9fb3305a08328ab84641795449efe07e9bc30"
+      "hash": "sha256:4c05c8c20359c3d899405ab985f0c1e36c6a9fb7c9829bdc2c22c31cd7641cd4"
     },
     {
       "id": "images",
@@ -143,7 +143,7 @@
       "bin": ["niri-wallpaper"],
       "readme": "sources/niri/README.md",
       "path": "sources/niri/",
-      "hash": "sha256:5dbcb00efd1b3b3bab40671e797c5a631f3ce5f615f7bda513b50bbcf7eece41"
+      "hash": "sha256:d5c5fa7ba681701539fb5a788cb707fffcb06b55dec94163c0f97dfc9e48bfcd"
     },
     {
       "id": "shortcuts",
@@ -169,7 +169,7 @@
       "bin": [],
       "readme": "sources/ssh/README.md",
       "path": "sources/ssh/",
-      "hash": "sha256:97b1b93cdc9f730f8ce74ea1327d0cbb4b7285a8b2c390c7c7f1acf6fe85d872"
+      "hash": "sha256:7e51bee0712139e82afb1c4a466557852b7d735e1eaeb24aec9ac5a8cffe83a7"
     },
     {
       "id": "systemd",
@@ -182,7 +182,7 @@
       "bin": [],
       "readme": "sources/systemd/README.md",
       "path": "sources/systemd/",
-      "hash": "sha256:a332f19534efc1261df4c216149ba8d94a8f4faa69ccf05f90babd7a27358f26"
+      "hash": "sha256:3158f5b8e403e14cfcd70a2726931e4fdb4692f8e70f94d47c41016954f0cfce"
     },
     {
       "id": "tmux",
@@ -195,7 +195,7 @@
       "bin": ["tmux-open"],
       "readme": "sources/tmux/README.md",
       "path": "sources/tmux/",
-      "hash": "sha256:0d72d9f3face4c6647f7a9aa702cf24b3f49ba18c3a8ec8c07cb05bbb127cd9c"
+      "hash": "sha256:ac6423bf7072b07d472ff6ac983da215156daa0afcdedf16e04c5b0079fe3b3a"
     },
     {
       "id": "work-setup",
@@ -208,7 +208,7 @@
       "bin": [],
       "readme": "sources/work-setup/README.md",
       "path": "sources/work-setup/",
-      "hash": "sha256:4dee10997a8ba875e23654f78b8ffeeb8ce3ba0650cc5e7a80b0650a41fe2598"
+      "hash": "sha256:7c9d057fde467b8b71c76ff6e24ea38a3c007ebae870112682ea11a82eeb80cb"
     }
   ]
 }
