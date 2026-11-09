@@ -68,7 +68,7 @@ Copy only the `.toml`. Look reads `~/.look/sources/` flat, so it never looks ins
 
 ## Change it to fit your machine
 
-Every file here was written against somebody else's setup, and what makes an example useful is exactly what makes it personal: a projects directory, a terminal, an editor. Open the `.toml` and change those lines before you reload.
+Every file here was written against somebody else's setup, and what makes an example useful is exactly what makes it personal: a projects directory, a terminal, an editor. Open the `.toml` and change those lines before you reload. Installing from inside Look, under Settings > Extend, asks for them up front where an example declares `[[setup]]` fields; most of these do.
 
 The five that catch people:
 

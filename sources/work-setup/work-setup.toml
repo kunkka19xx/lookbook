@@ -12,3 +12,29 @@ do = [
   "open -a Ghostty",
   "open -a Safari https://github.com/pulls",
 ]
+
+# Asked by the installer, one field per app, so the routine arrives as yours.
+[[setup]]
+label = "Chat app"
+block = "work-setup"
+key   = "do"
+match = "Slack"
+note  = "An app name, as `open -a` wants it."
+
+[[setup]]
+label = "Terminal"
+block = "work-setup"
+key   = "do"
+match = "Ghostty"
+
+[[setup]]
+label = "Browser"
+block = "work-setup"
+key   = "do"
+match = "Safari"
+
+[[setup]]
+label = "First page of the day"
+block = "work-setup"
+key   = "do"
+match = "https://github.com/pulls"
