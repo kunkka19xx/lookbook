@@ -1,0 +1,5 @@
+name        = "Downloads (live)"
+description = "Your Downloads folder as rows that update themselves, through a connector."
+platforms   = ["linux", "macos"]
+look        = "0.7.5"
+requires    = ["bash", "jq"]
