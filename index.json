@@ -147,6 +147,19 @@
       "hash": "sha256:d5c5fa7ba681701539fb5a788cb707fffcb06b55dec94163c0f97dfc9e48bfcd"
     },
     {
+      "id": "obsidian",
+      "name": "Obsidian",
+      "description": "Your vault as rows, a note created from what you typed, and Obsidian's own search.",
+      "platforms": ["macos"],
+      "look": "0.7.5",
+      "requires": ["python3"],
+      "files": ["obsidian.toml"],
+      "bin": ["note-preview"],
+      "readme": "sources/obsidian/README.md",
+      "path": "sources/obsidian/",
+      "hash": "sha256:f88db9b8e0a94cf65fc5d4a790665c379727d36c22b57c3608bc8fd6997a7230"
+    },
+    {
       "id": "shortcuts",
       "name": "Shortcuts",
       "description": "Every shortcut from the Shortcuts app, as rows.",
