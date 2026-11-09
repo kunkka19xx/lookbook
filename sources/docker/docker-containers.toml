@@ -32,3 +32,13 @@ do      = ["docker stop {id}"]
 name    = "Restart container"
 confirm = "Restart {title}?"
 do      = ["docker restart {id}"]
+
+# Asked by the installer, so Enter opens your terminal rather than the author's.
+[[setup]]
+label = "Your terminal"
+type  = "choice"
+block = "docker-containers"
+key   = "open"
+match = "Ghostty"
+options = ["Ghostty", "Alacritty", "kitty", "WezTerm", "iTerm", "Terminal"]
+note  = "Opened with `open -na`, so it is the app name as it appears in /Applications."

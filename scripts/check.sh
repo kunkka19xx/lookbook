@@ -134,6 +134,27 @@ fail() {
     failures=$((failures + 1))
 }
 
+# What a Look from before `[[setup]]` says about one. The table is reserved
+# for the installer's questions, and a Look that does not know it reports this
+# line and loads the blocks anyway, which is the one case where a parser older
+# than a key is not a broken example. Dropped from the output with a note, so
+# the pin can stay on the release people run; once it advances to one that
+# knows the table, the parser validates the fields and the note goes away.
+readonly SETUP_UNKNOWN='problem: [setup] must be a table'
+setup_noted=0
+# Says it once per run. Called from the main shell, since a function inside
+# a command substitution could not keep the flag.
+note_setup_unknown() {
+    printf '%s\n' "$1" | grep -qF "$SETUP_UNKNOWN" || return 0
+    [ "$setup_noted" -eq 0 ] || return 0
+    printf '  note  [[setup]] fields need a Look newer than the pinned %s; older ones load the blocks and skip the questions\n' \
+        "$(git -C "$LOOK_CHECKOUT" describe --tags --always 2>/dev/null || echo 'checkout')"
+    setup_noted=1
+}
+without_setup_unknown() {
+    printf '%s\n' "$1" | grep -vF "$SETUP_UNKNOWN" || true
+}
+
 # CI materialises the checkout in a step of its own, before the cargo cache is
 # restored, so the cache has a workspace to key on. It asks for it here rather
 # than checking look out itself, so the pinned ref is decided in one place and
@@ -294,6 +315,8 @@ while read -r dir; do
         fail "$name: the parser exited non-zero"
         continue
     fi
+    note_setup_unknown "$output"
+    output="$(without_setup_unknown "$output")"
 
     if printf '%s\n' "$output" | grep -q '^problem:'; then
         printf '%s\n' "$output" | grep '^problem:' | sed 's/^/  /'
@@ -472,6 +495,8 @@ find "$SOURCES_DIR" -mindepth 2 -maxdepth 2 -name '*.toml' ! -name 'meta.toml' \
 
 echo "every example installed together"
 combined="$("$parser" "$all")"
+note_setup_unknown "$combined"
+combined="$(without_setup_unknown "$combined")"
 if printf '%s\n' "$combined" | grep -q '^problem:'; then
     printf '%s\n' "$combined" | grep '^problem:' | sed 's/^/  /'
     fail "the examples collide when installed together"
