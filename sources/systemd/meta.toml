@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "systemd units"
+description = "Your user services as rows, with logs in the preview and restart on Cmd+K."
+platforms   = ["linux"]
+look        = "0.6.12"
+requires    = ["systemctl"]

@@ -11,3 +11,12 @@ name = "Worktrees"
 icon = "🌳"
 run  = "git -C {path} worktree list | awk '{ branch = $NF; gsub(/[][]/, \"\", branch); print $1 \"\\t\" branch \"\\t\" $1 }'"
 open = "open {id}"
+
+# Asked by the installer: `open` is macOS, the other two are Linux and Windows.
+[[setup]]
+label = "Open a folder with"
+type  = "choice"
+block = "git-worktrees"
+key   = "open"
+match = "open"
+options = ["open", "xdg-open", "explorer"]

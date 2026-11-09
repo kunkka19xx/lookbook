@@ -39,3 +39,24 @@ then = ["template-action"]
 name    = "Do the thing"
 confirm = "Really do the thing to {title}?"   # required if it destroys anything
 do      = ["echo {path}"]
+
+
+# What the installer asks for, so the lines above arrive pointing at the
+# user's machine rather than yours. Each field names a real value already in
+# this file, so the file still works copied in by hand. `type` is folder,
+# file, text (the default) or choice; `match` picks one substring of the
+# value, and has to appear in it exactly once. Delete these if nothing here
+# is personal.
+#
+# [[setup]]
+# label = "Folder to list"
+# type  = "folder"
+# block = "template"
+# key   = "dir"
+#
+# [[setup]]
+# label = "Editor"
+# block = "template"
+# key   = "edit"
+# match = "nvim"
+# note  = "What Cmd+E runs."

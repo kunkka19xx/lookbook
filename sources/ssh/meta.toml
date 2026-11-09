@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "SSH hosts"
+description = "Every host in your ~/.ssh/config as a row. Enter opens a terminal connected to it."
+platforms   = ["macos"]
+look        = "0.6.12"
+requires    = ["ssh"]

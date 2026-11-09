@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "Bookmarks"
+description = "A handful of links you keep by hand, as rows."
+platforms   = ["linux"]
+look        = "0.6.12"
+requires    = []

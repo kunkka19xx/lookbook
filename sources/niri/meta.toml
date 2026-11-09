@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "niri wallpaper and screenshots"
+description = "Your wallpaper and your screenshots, both picked by eye in the preview pane."
+platforms   = ["linux"]
+look        = "0.6.12"
+requires    = ["niri"]

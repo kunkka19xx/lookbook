@@ -8,7 +8,7 @@ LAYOUT_FILE ?= $(HOME)/.look/super-actions.toml
 SOURCE_NAMES := $(notdir $(wildcard sources/*))
 TILE_NAMES   := $(filter-out README.md,$(notdir $(wildcard tiles/*)))
 
-.PHONY: help new new-tile check install uninstall show list
+.PHONY: help new new-tile check index install uninstall show list
 
 help:
 	@echo "lookbook"
@@ -25,6 +25,7 @@ help:
 	@echo "  make new-tile NAME=disk  scaffold tiles/disk from the template"
 	@echo "  make show NAME=disk      print the block to paste, and where"
 	@echo
+	@echo "  make index               rebuild index.json, the catalog Look reads"
 	@echo "  make check               check everything against CONTRIBUTING"
 	@echo "  make check NAME=tmux     check just that one"
 	@echo "  make list                what is in here"
@@ -42,10 +43,16 @@ new-tile:
 check:
 	@./scripts/check.sh $(NAME)
 
+# The catalog Look lists these from. Regenerate after adding or editing a
+# source; `make check` fails when it is stale.
+index:
+	@./scripts/index.sh
+
 install:
 	@mkdir -p "$(SOURCES_DIR)"
 ifeq ($(NAME),)
-	@cp sources/*/*.toml "$(SOURCES_DIR)/"
+	@find sources -mindepth 2 -maxdepth 2 -name '*.toml' ! -name meta.toml \
+		-exec cp {} "$(SOURCES_DIR)/" \;
 	@echo "installed every source into $(SOURCES_DIR)"
 else
 	@test -d "sources/$(NAME)" || { \
@@ -53,7 +60,8 @@ else
 			&& echo "$(NAME) is a tile: it is merged into $(LAYOUT_FILE), not copied. Try make show NAME=$(NAME)" \
 			|| echo "no sources/$(NAME) (make list)"; \
 		exit 1; }
-	@cp sources/$(NAME)/*.toml "$(SOURCES_DIR)/"
+	@find sources/$(NAME) -maxdepth 1 -name '*.toml' ! -name meta.toml \
+		-exec cp {} "$(SOURCES_DIR)/" \;
 	@if [ -d "sources/$(NAME)/bin" ]; then \
 		mkdir -p "$(BIN_DIR)"; \
 		cp sources/$(NAME)/bin/* "$(BIN_DIR)/"; \
@@ -68,7 +76,8 @@ endif
 uninstall:
 	@test -n "$(NAME)" || { echo "usage: make uninstall NAME=git"; exit 1; }
 	@test -d "sources/$(NAME)" || { echo "no sources/$(NAME) (make list)"; exit 1; }
-	@for file in sources/$(NAME)/*.toml; do rm -f "$(SOURCES_DIR)/$$(basename "$$file")"; done
+	@find sources/$(NAME) -maxdepth 1 -name '*.toml' ! -name meta.toml \
+		-exec sh -c 'rm -f "$(SOURCES_DIR)/$$(basename "$$1")"' _ {} \;
 	@echo "removed sources/$(NAME) from $(SOURCES_DIR); reload Look"
 
 # Tiles are merged, not copied: $(LAYOUT_FILE) holds the whole strip, and a
@@ -92,7 +101,7 @@ show:
 list:
 	@echo "sources -> $(SOURCES_DIR)"
 	@for name in $(SOURCE_NAMES); do \
-		printf '  %-16s %s file(s)\n' "$$name" "$$(ls sources/$$name/*.toml | wc -l | tr -d ' ')"; \
+		printf '  %-16s %s file(s)\n' "$$name" "$$(ls sources/$$name/*.toml | grep -cv '/meta\.toml$$')"; \
 	done
 	@echo
 	@echo "tiles -> $(LAYOUT_FILE), merged by hand"

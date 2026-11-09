@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "tmux sessions"
+description = "One session per project, opened in the terminal you are already in."
+platforms   = ["macos"]
+look        = "0.6.12"
+requires    = ["tmux", "jq"]

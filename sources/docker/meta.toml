@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "Docker containers"
+description = "Every container as a row, with status, logs in the preview, and a shell on Enter."
+platforms   = ["macos"]
+look        = "0.6.12"
+requires    = ["docker", "jq"]
