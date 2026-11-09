@@ -197,7 +197,7 @@ make check NAME=tmux      # just the one you are working on
 
 It borrows Look's own parsers, built from a checkout **pinned to Look's latest release tag**, so it catches exactly what Look would: unknown keys, a block with no producer, a dangling `then`, a duplicate id, a bad glob. Then it re-reads the rules above back to you — a hard-coded home directory, a quoted placeholder, a `curl` into a shell, a missing **Requires** or **Platforms** line, a block your README never mentions, the `TODO` row `make new` left in the index, a committed GIF. For a tile it also synthesizes a `layout` naming everything the file declares, so a tile that parses but cannot be placed fails here rather than on someone's strip. The same script runs in CI.
 
-Because the pin is a release and not `main`, a key that has not shipped yet fails here by name, which is how the **Requires** line in your README stays true. Writing an example for something unreleased is the one case to override it:
+Because the pin is a release and not `main`, a key that has not shipped yet fails here by name, which is how the **Requires** line in your README stays true. The one exception is `[[setup]]`: a Look older than it loads the blocks and skips the questions, so the checker notes it rather than failing, and validates the fields once the pin knows them. Writing an example for something unreleased is the one case to override it:
 
 ```bash
 LOOK_REF=main make check
