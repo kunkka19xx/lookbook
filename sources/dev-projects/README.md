@@ -4,7 +4,9 @@ Every folder in `~/dev` as a row. Type a project name, Enter opens it, `Cmd+E` o
 
 The rows are real folders, so everything Look already does to a folder keeps working: the preview lists the children, `Cmd+F` reveals it, `Cmd+C` copies the path.
 
-**Requires.** Look v0.6.12 or newer, and v0.7.5 for the empty `edit` to mean your usual editor.
+**Requires.** Look v0.7.5 or newer, for `scope` and the empty `edit`. On an older
+build `scope` is reported and ignored, and `Cmd+E` does nothing until you fill in
+`edit`.
 
 **Platforms.** macOS, Linux, Windows.
 
@@ -21,6 +23,17 @@ Reload with `Cmd+Shift+;` (macOS) or `Ctrl+Shift+;` (Linux, Windows).
 | Block | Lists | Enter |
 | --- | --- | --- |
 | `dev-projects` | folders in `~/dev` | opens the folder |
+
+## Narrowing to just your projects
+
+`scope = true` reserves `projects`, `repo` and `proj` as the first word of a
+line, so `projects look` lists only your projects matching "look" instead of
+searching your whole machine for both words. The word alone (`projects`) is an
+ordinary search, not a narrowing.
+
+Every single-word name and alias becomes one of those openers, so an alias is
+no longer free: `code` was dropped because it would have reserved the word your
+editor is called. Drop `scope` if you would rather keep the words.
 
 ## Customise
 

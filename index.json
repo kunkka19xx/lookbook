@@ -40,7 +40,7 @@
       "bin": ["browser-history-rows"],
       "readme": "sources/browser-history/README.md",
       "path": "sources/browser-history/",
-      "hash": "sha256:7a9553e447acc91d1e93393f00f8c9859d0aae966e1105847ff1770cf954346b"
+      "hash": "sha256:9e61f74a9d9dfb57e6e2884ca42d7ef4ca4ffc77080f921ff4a6b985b86a3e0c"
     },
     {
       "id": "close-windows",
@@ -66,7 +66,7 @@
       "bin": [],
       "readme": "sources/dev-projects/README.md",
       "path": "sources/dev-projects/",
-      "hash": "sha256:b6ab7507709504bb382ba68148d23f67cf8b6d379b1d629f5bb76f78a1fbad40"
+      "hash": "sha256:276e09de6e0baeb8befbc353396a6a7fc26b7a14570748622cd5554fc40fa5c8"
     },
     {
       "id": "docker",
@@ -80,6 +80,19 @@
       "readme": "sources/docker/README.md",
       "path": "sources/docker/",
       "hash": "sha256:54249bfbfd07b8a948e9e8658d12d8b3e98d084441811c6b21d89c29db5cbe24"
+    },
+    {
+      "id": "downloads-live",
+      "name": "Downloads (live)",
+      "description": "Your Downloads folder as rows that update themselves, through a connector.",
+      "platforms": ["linux", "macos"],
+      "look": "0.7.5",
+      "requires": ["bash", "jq"],
+      "files": ["downloads-live.toml"],
+      "bin": ["downloads-live"],
+      "readme": "sources/downloads-live/README.md",
+      "path": "sources/downloads-live/",
+      "hash": "sha256:0876680c1f5e355eac411045146744d20d81cfd661b281ed0852faad6bd83abe"
     },
     {
       "id": "git",
