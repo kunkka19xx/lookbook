@@ -6,14 +6,14 @@ Two kinds, because Look reads two files, and which one a thing goes into decides
 
 | | What it is | Lives in | Installed by |
 | --- | --- | --- | --- |
-| [**sources/**](sources) | your own rows in the launcher: repos, SSH hosts, containers, a morning routine | `~/.look/sources/*.toml`, read flat | copying a file in |
+| [**sources/**](sources) | your own rows in the launcher: repos, SSH hosts, containers, a morning routine | `~/.look/sources/*.toml`, read flat | `Settings > Extend` in Look, or copying a file in |
 | [**tiles/**](tiles) | your own tiles on the Super Actions strip, the empty home screen | `~/.look/super-actions.toml`, one file | merging a block into it by hand |
 
 One folder here is one topic, holding a README and one or more `.toml` files you can take independently.
 
 New to either? The [sources format guide](https://github.com/kunkka19xx/look/blob/main/docs/user-sources.md) and the [Super Actions section](https://github.com/kunkka19xx/look/blob/main/docs/user-guide.md#super-actions) of the user guide are both short.
 
-> **Sources need Look v0.6.12 or newer**, tiles and `applies` need **v0.6.13**. Earlier builds ignore what they do not know about, so nothing appears and nothing is reported. Not released yet: [build from source](https://github.com/kunkka19xx/look/blob/main/DEVELOPMENT.md) to try these today.
+> **Sources need Look v0.6.12 or newer**, tiles and `applies` need **v0.6.13**, and installing from `Settings > Extend` needs **v0.7.5**. Earlier builds ignore what they do not know about, so nothing appears and nothing is reported.
 
 **_Tmux source in action_**  
 ![tmux](./sources/tmux/open-in-tmux.gif)
@@ -52,7 +52,9 @@ In a real file: `[dev-projects]` is the block, `dir = "~/dev"` is the producer t
 
 ## Install any example
 
-A **source** is copied:
+A **source** installs from inside Look: open `Settings > Extend` and choose **Browse lookbook**. Each card says whether the source works on your platform and which programs it needs that you do not have, and its name opens the README. **Install** shows the declaration before anything is written and asks for any values the example needs (a folder, a terminal, an app). The `.toml` lands in `~/.look/sources/`, a helper script in `~/.look/bin/`, and Look reloads by itself. A source you already have reads **Reconfigure**. Look fetches the catalog only while that tab is open, never on launch.
+
+Or copy it in by hand:
 
 ```bash
 cp sources/<name>/*.toml ~/.look/sources/
@@ -62,7 +64,7 @@ Or copy a single file out of a folder if you only want that one.
 
 A **tile** is merged, because `~/.look/super-actions.toml` is one file holding your whole strip. Put the tile's name in the `layout` drawing at the top, then paste its block onto the end. `make show NAME=<name>` prints what to paste; [tiles/README.md](tiles) has the walkthrough. There is deliberately no `make install` for tiles: a script that edited that file would be rearranging your strip.
 
-Then reload Look either way: `Cmd+Shift+;` on macOS, `Ctrl+Shift+;` on Linux and Windows.
+After copying or merging by hand, reload Look: `Cmd+Shift+;` on macOS, `Ctrl+Shift+;` on Linux and Windows.
 
 Copy only the `.toml`. Look reads `~/.look/sources/` flat, so it never looks inside subdirectories, and a stray `README.md` in there is reported as an ignored file. If an example ships a script in `bin/`, its README says where to put it.
 
@@ -147,6 +149,8 @@ Most of them touch only what you point them at. One does not, on purpose: [brows
 ## Contributing
 
 Yes please. `make new NAME=tmux` scaffolds one with every rename already done. One folder per example, [the rules are short](CONTRIBUTING.md), and CI parses every file with Look's own parser so a typo cannot reach anyone. Two things we ask beyond that: **install it and use it before you commit** (parsing is not running), and **say which platforms you actually tested on**.
+
+**AI-assisted contributions are welcome.** How it was written does not matter; what we review is whether it is **useful** to someone besides you, **well documented** (a README with its **Requires** and **Platforms** lines and a **Customise** section), and **tested** by installing it in Look and using it. You are the author either way, so read every line before you open the PR and be ready to answer for it.
 
 ## License
 
