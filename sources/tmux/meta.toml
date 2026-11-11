@@ -3,5 +3,5 @@
 name        = "tmux sessions"
 description = "One session per project, opened in the terminal you are already in."
 platforms   = ["macos"]
-look        = "0.6.12"
+look        = "0.6.13"
 requires    = ["tmux", "jq"]

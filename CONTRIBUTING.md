@@ -88,12 +88,13 @@ block = "dev-projects"
 key   = "dir"
 
 [[setup]]
-label = "Editor"
+label = "Editor for Cmd+E (blank: your usual one)"
 block = "dev-projects"
 key   = "edit"
-match = "code"
-note  = "What Cmd+E runs."
+note  = "A command with {path}: open -a 'Zed' {path}, code {path}, nvim {path}."
 ```
+
+- **Leave `edit`, `terminal` and `reveal` to the user's own tools.** Look already opens a row in the editor, terminal and file manager set in `~/.look/config`, so declare one only when these rows need something different. To let an installer choose without forcing a choice, ship it empty (`edit = ""`, Look v0.7.5) with a field like the one above: blank keeps the user's tool. A command you do write needs its program installed (`code` is not, until VS Code is told to add it); `open -a 'App' {path}` opens any app by name on macOS, and a terminal editor such as `nvim {path}` opens in the user's `terminal`.
 
 - **It points at a real value, never a placeholder.** The file keeps working copied in by hand, and nothing ships half-finished. A Look older than the field logs one line about it and loads the blocks anyway.
 - **`type`** is `folder` or `file` for a picker, `text` (the default) for a box, `choice` for a list; a `choice` needs `options`, and the value as written has to be one of them.

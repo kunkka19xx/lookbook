@@ -66,7 +66,7 @@
       "bin": [],
       "readme": "sources/dev-projects/README.md",
       "path": "sources/dev-projects/",
-      "hash": "sha256:08d0fe0c30bbbf510c714d8beb149e154b18bf82648244fb44c4a3a841368934"
+      "hash": "sha256:b6ab7507709504bb382ba68148d23f67cf8b6d379b1d629f5bb76f78a1fbad40"
     },
     {
       "id": "docker",
@@ -190,13 +190,13 @@
       "name": "tmux sessions",
       "description": "One session per project, opened in the terminal you are already in.",
       "platforms": ["macos"],
-      "look": "0.6.12",
+      "look": "0.6.13",
       "requires": ["tmux", "jq"],
       "files": ["tmux-open.toml", "tmux-sessions.toml"],
       "bin": ["tmux-open"],
       "readme": "sources/tmux/README.md",
       "path": "sources/tmux/",
-      "hash": "sha256:ac6423bf7072b07d472ff6ac983da215156daa0afcdedf16e04c5b0079fe3b3a"
+      "hash": "sha256:c64899ab74c7da32486e5e8d359afb80c0b15b19097938dc9b19c889efce41f1"
     },
     {
       "id": "work-setup",

@@ -4,13 +4,15 @@
 # a terminal, and raising it are the parts that differ from setup to setup, and
 # they are worth being able to read and edit as a normal shell script.
 #
-# This block names {path}, so it is never a row you can type for: it only means
-# something against a selected project. Reach it with Cmd+K.
+# This block names {path}, so it is never a row you can type for. `applies`
+# puts it on the Cmd+K menu of every folder row, your projects included, next
+# to the actions already there rather than in place of them.
 
 [tmux-open]
-name = "Open in tmux"
-icon = "🧵"
-do   = ["~/.look/bin/tmux-open {path}"]
+name    = "Open in tmux"
+icon    = "🧵"
+applies = "dirs"
+do      = ["~/.look/bin/tmux-open {path}"]
 
 
 # The same thing on Cmd+T, for your own block of project rows. `terminal` is one
@@ -24,4 +26,3 @@ do   = ["~/.look/bin/tmux-open {path}"]
 #   dir      = "~/dev"
 #   only     = "dirs"
 #   terminal = "~/.look/bin/tmux-open {path}"
-#   then     = ["tmux-open"]

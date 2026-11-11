@@ -14,8 +14,14 @@ exclude = ["archive*", "node_modules"]
 
 aliases = ["repo", "proj", "code"]
 
-# Cmd+E on a project. Declare only what differs from your global editor.
-edit = "code {path}"
+# Typed in full, a name or alias otherwise loses to any deep folder that only
+# starts with it (`repo` to `repository/`). 200 clears that; an exact folder
+# name still wins.
+bias    = 200
+
+# Cmd+E on a project. Empty uses the editor in your Look config; fill it in
+# only for an editor just for these rows.
+edit = ""
 
 # What the installer asks you, so the two lines above arrive already pointing
 # at your machine instead of the author's. Each field names a real value, so
@@ -29,8 +35,7 @@ key   = "dir"
 note  = "The folder whose children become rows. One level deep."
 
 [[setup]]
-label = "Editor command"
+label = "Editor for Cmd+E (blank: your usual one)"
 block = "dev-projects"
 key   = "edit"
-match = "code"
-note  = "What Cmd+E runs. nvim, hx, subl, or whatever you use."
+note  = "A command with {path}: open -a 'Zed' {path}, code {path}, nvim {path}."
