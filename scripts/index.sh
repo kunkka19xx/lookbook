@@ -8,6 +8,11 @@
 # browser shows before you install comes from here: the name, the sentence, the
 # platforms, what you need installed first.
 #
+# `base` and `web` are a published contract, not a convenience: Look reads the
+# page base straight off this file rather than deriving it from the raw one, so
+# an index without them is an index whose READMEs nobody can open. Both are
+# asserted below for that reason.
+#
 # Derived rather than declared: the `.toml` filenames, the `bin/` scripts, and
 # a hash of both. meta.toml says what only a person can say; this fills in what
 # the folder already knows, so the two cannot drift.
@@ -24,6 +29,17 @@ readonly BASE="https://raw.githubusercontent.com/kunkka19xx/lookbook/main/"
 # right for a .toml Look is about to parse and wrong for a README someone
 # clicked to read: GitHub renders this one, images, anchors and all.
 readonly WEB="https://github.com/kunkka19xx/lookbook/blob/main/"
+
+# Neither may be empty or relative. A catalog can be published with a wrong
+# entry and fixed in the next commit; published without these it tells every
+# client to look for files nowhere, and `make check` below would not notice
+# because the generator and the committed file would agree on the mistake.
+for pair in "base:$BASE" "web:$WEB"; do
+    case "${pair#*:}" in
+        https://*/) ;;
+        *) echo "index: ${pair%%:*} must be an absolute https URL ending in /" >&2; exit 1 ;;
+    esac
+done
 
 # A scalar: name = "Dev projects" -> Dev projects
 scalar() {
