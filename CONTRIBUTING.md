@@ -1,7 +1,9 @@
+---
+id: 01M74KTKX6R1PZA9HH2YAMSZEW
+---
 # Contributing an example
 
 Two kinds live here, and which one you are writing decides where it goes and how it is installed:
-
 - a **source** adds rows to the launcher, and is **copied** into `~/.look/sources/`;
 - a **tile** adds a tile to the Super Actions strip, and is **merged** into `~/.look/super-actions.toml`, a single file that holds the user's whole strip.
 
@@ -145,6 +147,34 @@ requires    = ["code"]
 Everything else in a catalog entry is derived from the folder, so there is
 nothing to keep in step by hand. Run `make index` after adding or editing a
 source; `make check` fails when you forget.
+
+### What Look reads from index.json
+
+You do not write this file, `make index` does, but it is the contract between
+this repo and every version of Look in the wild, so it is worth knowing what is
+load-bearing.
+
+At the top:
+
+| | |
+| --- | --- |
+| `base` | where a relative path is resolved from, serving raw bytes. Right for a `.toml` Look is about to parse |
+| `web` | the same files as rendered pages. Right for a README someone clicked, and the only thing a card's README link is built from |
+| `version` | the schema's own version, for a change that cannot be made backwards compatible |
+
+Per entry: `id`, `name`, `description`, `platforms`, `requires` and `look` come
+from your `meta.toml`; `files`, `bin`, `readme`, `path` and `hash` are derived
+from the folder.
+
+**`base` and `web` are always both present.** Look reads the page base straight
+off this file rather than working it out from the raw one. Earlier versions of
+Look did derive it, because this catalog once shipped without `web`, and both
+shells carried a copy of that derivation; publishing it here let them delete it.
+A catalog that drops either field is one whose READMEs nobody can open, so
+`scripts/index.sh` refuses to generate it.
+
+A client may ignore any field it does not know, and should: `look` and `hash`
+were added after the first clients shipped, and nothing broke.
 
 ## Link a GIF, do not commit it
 
