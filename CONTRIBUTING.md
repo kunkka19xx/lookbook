@@ -1,7 +1,9 @@
+---
+id: 01M74KTKX6R1PZA9HH2YAMSZEW
+---
 # Contributing an example
 
 Two kinds live here, and which one you are writing decides where it goes and how it is installed:
-
 - a **source** adds rows to the launcher, and is **copied** into `~/.look/sources/`;
 - a **tile** adds a tile to the Super Actions strip, and is **merged** into `~/.look/super-actions.toml`, a single file that holds the user's whole strip.
 
@@ -86,12 +88,13 @@ block = "dev-projects"
 key   = "dir"
 
 [[setup]]
-label = "Editor"
+label = "Editor for Cmd+E (blank: your usual one)"
 block = "dev-projects"
 key   = "edit"
-match = "code"
-note  = "What Cmd+E runs."
+note  = "A command with {path}: open -a 'Zed' {path}, code {path}, nvim {path}."
 ```
+
+- **Leave `edit`, `terminal` and `reveal` to the user's own tools.** Look already opens a row in the editor, terminal and file manager set in `~/.look/config`, so declare one only when these rows need something different. To let an installer choose without forcing a choice, ship it empty (`edit = ""`, Look v0.7.5) with a field like the one above: blank keeps the user's tool. A command you do write needs its program installed (`code` is not, until VS Code is told to add it); `open -a 'App' {path}` opens any app by name on macOS, and a terminal editor such as `nvim {path}` opens in the user's `terminal`.
 
 - **It points at a real value, never a placeholder.** The file keeps working copied in by hand, and nothing ships half-finished. A Look older than the field logs one line about it and loads the blocks anyway.
 - **`type`** is `folder` or `file` for a picker, `text` (the default) for a box, `choice` for a list; a `choice` needs `options`, and the value as written has to be one of them.
@@ -145,6 +148,34 @@ requires    = ["code"]
 Everything else in a catalog entry is derived from the folder, so there is
 nothing to keep in step by hand. Run `make index` after adding or editing a
 source; `make check` fails when you forget.
+
+### What Look reads from index.json
+
+You do not write this file, `make index` does, but it is the contract between
+this repo and every version of Look in the wild, so it is worth knowing what is
+load-bearing.
+
+At the top:
+
+| | |
+| --- | --- |
+| `base` | where a relative path is resolved from, serving raw bytes. Right for a `.toml` Look is about to parse |
+| `web` | the same files as rendered pages. Right for a README someone clicked, and the only thing a card's README link is built from |
+| `version` | the schema's own version, for a change that cannot be made backwards compatible |
+
+Per entry: `id`, `name`, `description`, `platforms`, `requires` and `look` come
+from your `meta.toml`; `files`, `bin`, `readme`, `path` and `hash` are derived
+from the folder.
+
+**`base` and `web` are always both present.** Look reads the page base straight
+off this file rather than working it out from the raw one. Earlier versions of
+Look did derive it, because this catalog once shipped without `web`, and both
+shells carried a copy of that derivation; publishing it here let them delete it.
+A catalog that drops either field is one whose READMEs nobody can open, so
+`scripts/index.sh` refuses to generate it.
+
+A client may ignore any field it does not know, and should: `look` and `hash`
+were added after the first clients shipped, and nothing broke.
 
 ## Link a GIF, do not commit it
 

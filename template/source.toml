@@ -21,9 +21,10 @@ only = "dirs"                      # dirs | files | all
 # bias    = -5                     # score offset: negative sits below apps
 
 # What the standard keys do to a picked row. Declare only what differs from the
-# user's global tools. Placeholders are escaped for you, so never quote them.
+# user's global tools: left out (or empty), Cmd+E, Cmd+T and Cmd+F use those.
+# Placeholders are escaped for you, so never quote them.
 open = "open {path}"
-edit = "nvim {path}"
+# edit = "open -a 'Zed' {path}"
 
 # Output shown in the right panel for the selected row.
 preview = "ls -la {path}"
@@ -55,8 +56,7 @@ do      = ["echo {path}"]
 # key   = "dir"
 #
 # [[setup]]
-# label = "Editor"
+# label = "Editor for Cmd+E (blank: your usual one)"
 # block = "template"
 # key   = "edit"
-# match = "nvim"
-# note  = "What Cmd+E runs."
+# note  = "A command with {path}, such as open -a 'Zed' {path}."

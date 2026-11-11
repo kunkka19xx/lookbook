@@ -1,12 +1,12 @@
 # tmux
 
-One session per project, opened in the terminal you are **already** in. Select a project, `Cmd+K`, **Open in tmux**: if a terminal is attached to tmux anywhere, that client is switched to the project's session and raised, rather than a second window appearing. A session is created if there is not one yet, and a terminal is spawned only when nothing is attached at all.
+One session per project, opened in the terminal you are **already** in. Select a project (or any folder), `Cmd+K`, **Open in tmux**: if a terminal is attached to tmux anywhere, that client is switched to the project's session and raised, rather than a second window appearing. A session is created if there is not one yet, and a terminal is spawned only when nothing is attached at all.
 
 Separately, `tmux-sessions` lists the sessions you already have, wherever you are, with window counts and whether each is live somewhere else.
 
 ![tmux](./open-in-tmux.gif) 
 
-**Requires.** Look v0.6.12 or newer, `tmux`, and a terminal emulator.
+**Requires.** Look v0.6.13 or newer, `tmux`, and a terminal emulator.
 
 **Platforms.** macOS. The session logic is portable, but raising the terminal uses `open -a`, so Linux and Windows need a few lines changed in `bin/tmux-open`, see Customise.
 
@@ -18,11 +18,7 @@ mkdir -p ~/.look/bin && cp sources/tmux/bin/tmux-open ~/.look/bin/
 chmod +x ~/.look/bin/tmux-open
 ```
 
-`tmux-open` is reached from a project row, so point your projects block at it. With [dev-projects](../dev-projects), add one line to `~/.look/sources/dev-projects.toml`:
-
-```toml
-then = ["tmux-open"]
-```
+Nothing to wire up: `tmux-open` declares `applies = "dirs"`, so it joins the `Cmd+K` menu of every folder row, [dev-projects](../dev-projects) included, next to the actions already there.
 
 Reload with `Cmd+Shift+;` (macOS) or `Ctrl+Shift+;` (Linux, Windows).
 
@@ -30,10 +26,10 @@ Reload with `Cmd+Shift+;` (macOS) or `Ctrl+Shift+;` (Linux, Windows).
 
 | Block | Lists | Enter |
 | --- | --- | --- |
-| `tmux-open` | on a project, via `Cmd+K` | switches to that project's session, creating it if needed |
+| `tmux-open` | on any folder, via `Cmd+K` | switches to that folder's session, creating it if needed |
 | `tmux-sessions` | every tmux session | attaches to it in a new terminal |
 
-`tmux-open` never appears when you type: it names `{path}`, so Look reaches it only through `then`. `tmux-sessions` is a top-level row, so `tm` finds it.
+`tmux-open` never appears when you type: it names `{path}`, so it is only ever an action on a selected folder. `tmux-sessions` is a top-level row, so `tm` finds it.
 
 ## Customise
 

@@ -66,7 +66,7 @@
       "bin": [],
       "readme": "sources/dev-projects/README.md",
       "path": "sources/dev-projects/",
-      "hash": "sha256:d64a8a46dc6d415f51714c8e2b6086137e0f332cb7c81f394d5c9c5dfd2768e5"
+      "hash": "sha256:276e09de6e0baeb8befbc353396a6a7fc26b7a14570748622cd5554fc40fa5c8"
     },
     {
       "id": "docker",
@@ -160,6 +160,19 @@
       "hash": "sha256:d5c5fa7ba681701539fb5a788cb707fffcb06b55dec94163c0f97dfc9e48bfcd"
     },
     {
+      "id": "obsidian",
+      "name": "Obsidian",
+      "description": "Your vault as rows, a note created from what you typed, and Obsidian's own search.",
+      "platforms": ["macos"],
+      "look": "0.7.5",
+      "requires": ["python3"],
+      "files": ["obsidian.toml"],
+      "bin": ["note-preview"],
+      "readme": "sources/obsidian/README.md",
+      "path": "sources/obsidian/",
+      "hash": "sha256:f88db9b8e0a94cf65fc5d4a790665c379727d36c22b57c3608bc8fd6997a7230"
+    },
+    {
       "id": "shortcuts",
       "name": "Shortcuts",
       "description": "Every shortcut from the Shortcuts app, as rows.",
@@ -203,13 +216,13 @@
       "name": "tmux sessions",
       "description": "One session per project, opened in the terminal you are already in.",
       "platforms": ["macos"],
-      "look": "0.6.12",
+      "look": "0.6.13",
       "requires": ["tmux", "jq"],
       "files": ["tmux-open.toml", "tmux-sessions.toml"],
       "bin": ["tmux-open"],
       "readme": "sources/tmux/README.md",
       "path": "sources/tmux/",
-      "hash": "sha256:ac6423bf7072b07d472ff6ac983da215156daa0afcdedf16e04c5b0079fe3b3a"
+      "hash": "sha256:c64899ab74c7da32486e5e8d359afb80c0b15b19097938dc9b19c889efce41f1"
     },
     {
       "id": "work-setup",

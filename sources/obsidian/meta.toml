@@ -1,0 +1,5 @@
+name        = "Obsidian"
+description = "Your vault as rows, a note created from what you typed, and Obsidian's own search."
+platforms   = ["macos"]
+look        = "0.7.5"
+requires    = ["python3"]

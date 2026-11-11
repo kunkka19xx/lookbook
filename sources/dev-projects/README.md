@@ -4,9 +4,9 @@ Every folder in `~/dev` as a row. Type a project name, Enter opens it, `Cmd+E` o
 
 The rows are real folders, so everything Look already does to a folder keeps working: the preview lists the children, `Cmd+F` reveals it, `Cmd+C` copies the path.
 
-**Requires.** Look v0.7.5 or newer (for `scope`; on 0.7.4 the key is reported
-and ignored, and everything else here still works). `code` if you keep the
-`edit` line as written.
+**Requires.** Look v0.7.5 or newer, for `scope` and the empty `edit`. On an older
+build `scope` is reported and ignored, and `Cmd+E` does nothing until you fill in
+`edit`.
 
 **Platforms.** macOS, Linux, Windows.
 
@@ -40,7 +40,7 @@ editor is called. Drop `scope` if you would rather keep the words.
 - `dir = "~/dev"` is the line most people change. Several roots: `dirs = ["~/dev", "~/work"]`.
 - `depth = 2` also lists each project's children, for a `~/dev/<org>/<repo>` layout.
 - `only = "files"` or `"all"` if folders are not what you want. `match` and `exclude` take globs, tested against the entry name. Hidden entries are always skipped.
-- `edit = "nvim {path}"`, or drop the line to use whatever `Cmd+E` already does.
-- `bias = -5` pushes these below your apps and files.
+- `edit` is empty, so `Cmd+E` opens your usual editor (`code_editor` in `~/.look/config`). For one just for these rows, write a command with `{path}`: `open -a 'Zed' {path}` opens any app by name on macOS, `code {path}` needs that command installed, and `nvim {path}` opens in your `terminal`.
+- `bias = 200` puts your projects above folders that merely start with what you typed (`repo` finds your repos, not every `repository/` inside them). Lower it if they crowd out other results; `bias = -5` pushes them below your apps and files instead.
 
 **Pairs with** [git](../git), which drills into the branches and worktrees of the selected project. One line to add, in its README.
