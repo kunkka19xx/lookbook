@@ -40,7 +40,7 @@
       "bin": ["browser-history-rows"],
       "readme": "sources/browser-history/README.md",
       "path": "sources/browser-history/",
-      "hash": "sha256:9e61f74a9d9dfb57e6e2884ca42d7ef4ca4ffc77080f921ff4a6b985b86a3e0c"
+      "hash": "sha256:135c4d58b193d7087838298b44bdc1afb2808ab594464f4e7ccb5aca698ccd65"
     },
     {
       "id": "close-windows",
