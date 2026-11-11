@@ -89,8 +89,10 @@ bases_of() {
     case "$1" in
         firefox)
             printf '%s\n' \
+                "$HOME/.config/mozilla/firefox" \
                 "$HOME/.mozilla/firefox" \
                 "$HOME/snap/firefox/common/.mozilla/firefox" \
+                "$HOME/.var/app/org.mozilla.firefox/config/mozilla/firefox" \
                 "$HOME/.var/app/org.mozilla.firefox/.mozilla/firefox" ;;
         brave)
             printf '%s\n' \
@@ -265,7 +267,7 @@ done
 
 # Nothing readable. Printing nothing keeps the rows from the last good run,
 # which is the whole point of saying nothing rather than saying "0 rows".
-[ "$n" -eq 0 ] && exit 0
+[ "$n" -eq 0 ] && { echo "no browser history database found" >&2; exit 0; }
 
 sqlite3 -batch -noheader :memory: "
 $attach
@@ -324,8 +326,8 @@ shown AS (
         )), '/') AS bare
     FROM kept
 ),
--- Two rows a person cannot tell apart are one row. `kept` groups on the exact
--- URL, so `reddit.com` and `reddit.com/?feed=home` survive it as a pair that
+-- Two rows a person cannot tell apart are one row. kept groups on the exact
+-- URL, so reddit.com and reddit.com/?feed=home survive it as a pair that
 -- prints identically. Grouped on both printed strings rather than on the URL,
 -- so a hash-routed site keeps its routes: those differ in the title. Keeps the
 -- most recent - SQLite takes the bare columns from the max(t) row.
@@ -354,6 +356,6 @@ SELECT json_object(
     'icon', CASE WHEN readfile(icon_path) IS NOT NULL THEN icon_path END
 )
 FROM (SELECT url, disp_title, bare, t, '$ICON_DIR/' || $HOST_SQL || '.png' AS icon_path FROM final)
--- $HOST_SQL reads `rest`, which `final` carries for that reason alone.
+-- $HOST_SQL reads rest, which final carries for that reason alone.
 ORDER BY t DESC;
 " 2>/dev/null | LC_ALL=C awk -v cap="$MAX_BYTES" '{ total += length($0) + 1; if (total > cap) exit; print }'
