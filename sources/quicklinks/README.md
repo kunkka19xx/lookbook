@@ -18,14 +18,21 @@ you.
 
 **Requires.** Look v0.7.5 or newer, for `{arg}`. Nothing else.
 
-**Platforms.** macOS and Linux. Every line runs `open` on macOS (checked first,
-so nothing changes there) and `xdg-open` on Linux. A last branch uses
-`start ""` for Windows, which is untested.
+**Platforms.** macOS and Linux use `quicklinks.toml`. Windows uses
+`windows/quicklinks.toml`, because Look runs commands through `cmd` there and
+cmd cannot read the shell syntax of the main file. The Windows file is a plain
+`start ""` per block, and is untested beyond that.
 
 ## Install
 
 ```bash
 cp sources/quicklinks/*.toml ~/.look/sources/
+```
+
+On Windows (PowerShell), copy the Windows file instead:
+
+```powershell
+copy sources\quicklinks\windows\quicklinks.toml $env:USERPROFILE\.look\sources\
 ```
 
 Reload with `Cmd+Shift+;` (macOS) or `Ctrl+Shift+;` (Linux, Windows).
