@@ -2,6 +2,6 @@
 
 name        = "GitHub"
 description = "Reviews waiting on you, your open PRs, your issues and your notifications, as rows."
-platforms   = ["macos"]
+platforms   = ["macos", "linux"]
 look        = "0.7.5"
 requires    = ["gh", "jq", "bash"]

@@ -163,14 +163,14 @@
       "id": "github",
       "name": "GitHub",
       "description": "Reviews waiting on you, your open PRs, your issues and your notifications, as rows.",
-      "platforms": ["macos"],
+      "platforms": ["macos", "linux"],
       "look": "0.7.5",
       "requires": ["gh", "jq", "bash"],
       "files": ["github.toml"],
       "bin": ["github-preview"],
       "readme": "sources/github/README.md",
       "path": "sources/github/",
-      "hash": "sha256:b18cf6aa595773854d7d2a22b401a114975abbd42a219804a1be29999ac1205a"
+      "hash": "sha256:8794233baae3fb500f72e010bf1a4d7f2e0dd31cec0a63ea6b5e7d1fb6b8c919"
     },
     {
       "id": "homebrew",
