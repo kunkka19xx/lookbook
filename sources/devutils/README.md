@@ -17,10 +17,10 @@ these here rather than on a website.
 program the rest do not: `jsonfmt` needs `jq`, `urldec` needs `python3`. Each
 says so by name if it is missing, rather than going blank.
 
-**Platforms.** macOS, where it was written and used. The clipboard and the two
-`date` dialects are detected rather than hard-coded, so Linux and Windows
-(through `clip.exe`) should work as-is — but untested, and a bug report is
-welcome.
+**Platforms.** macOS, where it was written, and Linux (tested on sway with
+`wl-copy`, `jq` and `python3`). The clipboard and the two `date` dialects are
+detected rather than hard-coded, so no line needed changing. Windows (through
+`clip.exe`) should work as-is, but is untested, and a bug report is welcome.
 
 ## Install
 

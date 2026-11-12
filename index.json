@@ -98,7 +98,7 @@
       "id": "devutils",
       "name": "Dev utils",
       "description": "UUIDs, passwords, base64, SHA-256, URL encoding, epoch times and JSON, onto the clipboard.",
-      "platforms": ["macos"],
+      "platforms": ["macos", "linux"],
       "look": "0.7.5",
       "requires": [],
       "files": ["devutils.toml"],
