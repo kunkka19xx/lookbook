@@ -13,9 +13,17 @@ Every one of them **shows the answer in the preview pane first**, then copies it
 on Enter. Nothing is sent anywhere, which is the actual argument for having
 these here rather than on a website.
 
-**Requires.** Look v0.7.5 or newer (for `{arg}`). Two of the eight want a
-program the rest do not: `jsonfmt` needs `jq`, `urldec` needs `python3`. Each
-says so by name if it is missing, rather than going blank.
+**Requires.** Look v0.7.5 or newer (for `{arg}`), and a clipboard tool, which
+every one of the eight copies through: `pbcopy` (built into macOS), `wl-copy`
+on a Wayland session or `xclip` / `xsel` on X11. Many Linux desktops ship none
+of them installed; the package is `wl-clipboard` (or `xclip`) on Arch, Debian,
+Ubuntu and Fedora alike. Without one the preview still shows the answer, but
+Enter copies nothing and the paste is whatever you copied before.
+
+Three of the eight want a program the rest do not: `jsonfmt` needs `jq` (and
+`wl-paste`, which comes with `wl-copy`), `urldec` needs `python3`, and `uuid`
+needs `uuidgen`, which Debian and Ubuntu ship separately as `uuid-runtime`.
+Each says so by name if it is missing, rather than going blank.
 
 **Platforms.** macOS, where it was written, and Linux (tested on sway with
 `wl-copy`, `jq` and `python3`). The clipboard and the two `date` dialects are
