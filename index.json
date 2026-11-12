@@ -69,6 +69,19 @@
       "hash": "sha256:6d12a646403ed86eeb96a013072147309f99724d5d3ed661e8276fbfe882334b"
     },
     {
+      "id": "convert",
+      "name": "Convert units",
+      "description": "Unit conversion from one typed line, offline, with your own units in a file you keep.",
+      "platforms": ["macos"],
+      "look": "0.7.5",
+      "requires": ["python3"],
+      "files": ["convert.toml"],
+      "bin": ["convert"],
+      "readme": "sources/convert/README.md",
+      "path": "sources/convert/",
+      "hash": "sha256:e664341fb7fbdf27ed889cee06806b91198d6b605c557f63a7ad3b8b49f3a752"
+    },
+    {
       "id": "dev-projects",
       "name": "Dev projects",
       "description": "Every folder in ~/dev as a row.",

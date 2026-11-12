@@ -1,0 +1,55 @@
+# Unit conversion from one typed line. Type "conv".
+#
+#   conv 10 kg to lb         conv 100 c to f
+#   conv 1 km to dm          conv 2.5 gib to mb
+#   conv 10 inch in cm       conv kg            what kg can become
+#
+# Offline, and nothing is embedded that you cannot read: every unit is one
+# line of a table in bin/convert, written in the same three-word language you
+# use for your own:
+#
+#   m|meter : length          a base unit
+#   ft = 0.3048 m             a unit made of another one
+#   C = 1 K + 273.15          and where zero is, when it differs
+#
+# That is the whole point of this source rather than a fixed list: `conv` is
+# only as useful as the units YOU work in, and adding one is a line in
+# ~/.look/convert.units. Nothing is special-cased in code - Celsius is in the
+# same table as inches.
+
+[convert]
+name    = "Convert units"
+aliases = ["conv"]
+icon    = "📐"
+
+# `{arg}` is the rest of the line after the word, and only a `do` block can
+# take one, which is why this is not a list of rows.
+#
+# `conv` with nothing after it shows the examples; a unit on its own
+# (`conv gib`) shows what that unit can become, which is how you find out what
+# is in the table without reading it.
+preview = "~/.look/bin/convert show {arg}"
+
+# Enter copies the headline - "22.0462 lb" - which is the line you would paste
+# into a message. The panel carries the exact value for when it matters. The
+# clipboard command lives in the script, so there is nothing platform-specific
+# in this file.
+do = ["~/.look/bin/convert line {arg} | ~/.look/bin/convert copy"]
+
+
+# The "add a rule" half of the feature, as a file rather than a dialog: a rule
+# is one line of text, it belongs in your dotfiles with everything else, and
+# an editor is better at editing than anything a launcher could draw.
+#
+# The preview shows the file as it stands, or what Enter would create. It
+# deliberately does not create anything itself: a preview runs merely because
+# a row is selected, and writing to somebody's config for that is a surprise.
+[convert-rules]
+name    = "Conversion rules"
+aliases = ["convrules"]
+icon    = "📝"
+preview = "~/.look/bin/convert rules-show"
+
+# `open -t` is macOS: it opens the file in whatever your default text editor
+# is. On Linux use `xdg-open`, or name an editor outright.
+do = ['''open -t "$(~/.look/bin/convert rules)"''']

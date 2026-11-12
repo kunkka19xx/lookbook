@@ -1,0 +1,489 @@
+#!/usr/bin/env python3
+"""Unit conversion from one typed line. Declared by ~/.look/sources/convert.toml.
+
+    convert show 10 kg to lb       the panel
+    convert line 10 kg to lb       the one line Enter copies
+    convert rules                  the path to your own rules, created if missing
+    convert copy                   stdin onto the clipboard
+
+Every unit below, and every unit you add yourself, is written in the same
+three-word language:
+
+    names : dimension              a base unit, the thing others are measured in
+    names = <how many> <unit>      a unit made of another one
+    names = <how many> <unit> + <offset>    when zero is not in the same place
+
+So `ft = 0.3048 m` is a line of the preset table and also exactly what you
+write in ~/.look/convert.units to add your own. There is no second format to
+learn, and nothing here is special-cased: Celsius is `C = 1 K + 273.15` in the
+same table as everything else.
+"""
+
+import os
+import re
+import subprocess
+import sys
+
+# ----------------------------------------------------------------- settings --
+# Look runs this through a LOGIN shell, which does not read ~/.zshrc, so set
+# these on the lines in convert.toml rather than exporting them.
+
+# Your own rules. One line each, same language as the table below.
+RULES = os.path.expanduser(
+    os.environ.get("LOOK_CONVERT_UNITS") or "~/.look/convert.units"
+)
+
+# Significant digits in the answer. The exact value is in the panel either way.
+DIGITS = int(os.environ.get("LOOK_CONVERT_DIGITS") or 6)
+
+# The presets. Grouped by dimension, and every line is a rule you could have
+# written yourself.
+#
+# Case is ignored everywhere, which is why the data units are spelled out
+# rather than left as MB/Mb/MiB: a launcher is one line typed in a hurry and
+# "mb" cannot mean three things.
+PRESETS = """
+# ---------------------------------------------------------------- length --
+m|meter|metre|meters|metres : length
+km|kilometer|kilometre   = 1000 m
+dm|decimeter|decimetre   = 0.1 m
+cm|centimeter|centimetre = 0.01 m
+mm|millimeter|millimetre = 0.001 m
+um|micrometer|micron     = 0.000001 m
+nm|nanometer             = 0.000000001 m
+mi|mile                  = 1609.344 m
+yd|yard                  = 0.9144 m
+ft|foot|feet             = 0.3048 m
+in|inch|inches           = 0.0254 m
+nmi|nauticalmile         = 1852 m
+ly|lightyear             = 9460730472580800 m
+
+# ------------------------------------------------------------------ mass --
+kg|kilogram|kilo : mass
+g|gram      = 0.001 kg
+mg|milligram = 0.000001 kg
+t|tonne|tonnes = 1000 kg
+lb|pound|lbs = 0.45359237 kg
+oz|ounce     = 0.028349523125 kg
+st|stone     = 6.35029318 kg
+
+# ----------------------------------------------------------------- time --
+s|sec|second : time
+ms|millisecond = 0.001 s
+us|microsecond = 0.000001 s
+ns|nanosecond  = 0.000000001 s
+min|minute     = 60 s
+h|hr|hour      = 3600 s
+d|day          = 86400 s
+wk|week        = 604800 s
+mo|month       = 2629800 s
+yr|year        = 31557600 s
+
+# ---------------------------------------------------------- temperature --
+# The one group where zero is in a different place per unit, which is what
+# the `+ offset` term is for. 459.67*5/9 is the Fahrenheit offset in kelvin,
+# written as the arithmetic it came from rather than as 255.3722222222.
+K|kelvin : temperature
+C|celsius|centigrade = 1 K + 273.15
+F|fahrenheit         = 5/9 K + 459.67*5/9
+
+# ---------------------------------------------------------------- volume --
+l|liter|litre|liters|litres : volume
+ml|milliliter|millilitre = 0.001 l
+cl|centiliter            = 0.01 l
+dl|deciliter             = 0.1 l
+m3|cubicmeter            = 1000 l
+gal|gallon               = 3.785411784 l
+qt|quart                 = 0.946352946 l
+pt|pint                  = 0.473176473 l
+cup                      = 0.2365882365 l
+floz|fluidounce          = 0.0295735295625 l
+tbsp|tablespoon          = 0.01478676478125 l
+tsp|teaspoon             = 0.00492892159375 l
+
+# ------------------------------------------------------------------ data --
+# Decimal and binary both, spelled apart, because the whole reason anyone
+# converts these is that a disk and an operating system disagree.
+b|byte|bytes : data
+kb|kilobyte = 1000 b
+mb|megabyte = 1000000 b
+gb|gigabyte = 1000000000 b
+tb|terabyte = 1000000000000 b
+pb|petabyte = 1000000000000000 b
+kib|kibibyte = 1024 b
+mib|mebibyte = 1048576 b
+gib|gibibyte = 1073741824 b
+tib|tebibyte = 1099511627776 b
+bit|bits     = 0.125 b
+kbit         = 125 b
+mbit         = 125000 b
+gbit         = 125000000 b
+
+# ----------------------------------------------------------------- speed --
+mps|meterspersecond : speed
+kph|kmh|kmph = 0.2777777777777778 mps
+mph          = 0.44704 mps
+knot|kt      = 0.5144444444444445 mps
+
+# ------------------------------------------------------------------ area --
+m2|sqm|squaremeter : area
+km2|sqkm  = 1000000 m2
+cm2|sqcm  = 0.0001 m2
+ha|hectare = 10000 m2
+acre      = 4046.8564224 m2
+ft2|sqft  = 0.09290304 m2
+in2|sqin  = 0.00064516 m2
+mi2|sqmi  = 2589988.110336 m2
+
+# -------------------------------------------------------------- pressure --
+pa|pascal : pressure
+kpa        = 1000 pa
+hpa|mbar   = 100 pa
+bar        = 100000 pa
+psi        = 6894.757293168 pa
+atm        = 101325 pa
+mmhg|torr  = 133.322387415 pa
+
+# ---------------------------------------------------------------- energy --
+j|joule : energy
+kj|kilojoule = 1000 j
+cal|calorie  = 4.184 j
+kcal         = 4184 j
+wh           = 3600 j
+kwh          = 3600000 j
+btu          = 1055.05585262 j
+
+# ----------------------------------------------------------------- power --
+w|watt : power
+kw|kilowatt = 1000 w
+mw|megawatt = 1000000 w
+hp          = 745.6998715822702 w
+
+# ----------------------------------------------------------------- angle --
+deg|degree : angle
+rad|radian = 57.29577951308232 deg
+turn       = 360 deg
+grad       = 0.9 deg
+"""
+
+# `to` is the separator people type; `in` is too, and is also a unit, so it is
+# only read as a separator when there is no `to` and never as the last word.
+SEPARATORS = ("to", "in", "into", "as", "->", "→", ">")
+
+MODE = ""
+
+
+def die(message, *hints):
+    """Say it where this mode can show it: see the same note in bin/timezone."""
+    if MODE == "show":
+        print("\n\n".join((message, *hints)))
+        sys.exit(0)
+    print(f"convert: {message}", file=sys.stderr)
+    for hint in hints:
+        print(f"  {hint}", file=sys.stderr)
+    sys.exit(1)
+
+
+# ------------------------------------------------------------------ units --
+NUMBER = re.compile(r"^-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?$")
+
+
+def number(text, where):
+    """A plain number, or the product and quotient of a few.
+
+    `5/9` and `459.67*5/9` are how the Fahrenheit rule reads as the
+    arithmetic it came from. Only * and / and no parentheses, which is enough
+    for a unit definition and small enough to read in one glance.
+    """
+    value = 1.0
+    for part in re.split(r"(?=[*/])", text.replace(" ", "")):
+        op, term = (part[0], part[1:]) if part[:1] in "*/" else ("*", part)
+        if not NUMBER.match(term):
+            die(f'"{text}" is not a number ({where})')
+        value = value * float(term) if op == "*" else value / float(term)
+    return value
+
+
+class Unit:
+    """How many of the dimension's base unit one of these is, and where its
+    zero sits relative to the base's."""
+
+    def __init__(self, name, dimension, factor, offset, canon=None):
+        self.name = name
+        self.dimension = dimension
+        self.factor = factor
+        self.offset = offset
+        # The first spelling on the line. Aliases exist so that anything can
+        # be typed; a listing wants one name per unit, not six.
+        self.canon = canon or name
+        self.rule = ""
+
+
+def load(text, units, source):
+    """Read one table into `units`, reporting a line it cannot use."""
+    for lineno, raw in enumerate(text.splitlines(), 1):
+        line = raw.split("#", 1)[0].strip()
+        if not line:
+            continue
+        where = f"{source} line {lineno}"
+
+        if ":" in line and "=" not in line:
+            names, _, dimension = line.partition(":")
+            dimension = dimension.strip().lower()
+            if not dimension:
+                die(f"a base unit needs a dimension after the colon ({where})")
+            spellings = [n.strip() for n in names.lower().split("|") if n.strip()]
+            for name in spellings:
+                units[name] = Unit(name, dimension, 1.0, 0.0, spellings[0])
+            continue
+
+        if "=" not in line:
+            die(f'"{raw.strip()}" is neither a base unit nor a rule ({where})',
+                "a base unit is `name : dimension`, a rule is `name = 2.5 other`")
+            continue
+
+        names, _, rest = line.partition("=")
+        body, _, offset_text = rest.partition("+")
+        parts = body.split()
+        if len(parts) < 2:
+            die(f'"{raw.strip()}" needs an amount and a unit ({where})',
+                "for example: ft = 0.3048 m")
+        amount = number(" ".join(parts[:-1]), where)
+        base_name = parts[-1].lower()
+        base = units.get(base_name)
+        if base is None:
+            die(f'"{base_name}" is not a unit I know yet ({where})',
+                "a rule may only be written in terms of a unit defined above it")
+        offset = number(offset_text, where) if offset_text.strip() else 0.0
+
+        spellings = [n.strip() for n in names.lower().split("|") if n.strip()]
+        for name in spellings:
+            unit = Unit(name, base.dimension,
+                        amount * base.factor, offset + amount * base.offset,
+                        spellings[0])
+            unit.rule = f"1 {name} = {parts[0]} {base_name}" + (
+                f" + {offset_text.strip()}" if offset_text.strip() else "")
+            units[name] = unit
+    return units
+
+
+def table():
+    """The presets, then your own rules on top, so yours win."""
+    units = load(PRESETS, {}, "the preset table")
+    mine = 0
+    if os.path.isfile(RULES):
+        try:
+            text = open(RULES, encoding="utf-8").read()
+        except OSError as err:
+            die(f"cannot read {RULES}: {err}")
+        before = len(units)
+        load(text, units, RULES)
+        mine = len(units) - before
+    return units, mine
+
+
+def find(units, word):
+    """One unit by name, forgiving a trailing s and a stray degree sign."""
+    want = word.lower().strip().strip("°.")
+    for candidate in (want, want.rstrip("s")):
+        if candidate in units:
+            return units[candidate]
+    return None
+
+
+# ------------------------------------------------------------------ answer --
+def pretty(value):
+    """A number as a person would write it: significant digits, no tail of
+    zeros, and no exponent until one is genuinely easier to read."""
+    if value != value or value in (float("inf"), float("-inf")):
+        return str(value)
+    if value == 0:
+        return "0"
+    text = f"{value:.{DIGITS}g}"
+    if "e" in text:
+        mantissa, _, exponent = text.partition("e")
+        return f"{mantissa.rstrip('0').rstrip('.')}e{int(exponent)}"
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return text
+
+
+def split_query(words):
+    """(amount, from words, to words), or (amount, from words, None)."""
+    lowered = [w.lower() for w in words]
+    cut = None
+    if "to" in lowered:
+        cut = lowered.index("to")
+    else:
+        for i, word in enumerate(lowered):
+            # `in` is a unit as well as a separator, so it only separates when
+            # something follows it: `10 cm in in` converts to inches.
+            if word in SEPARATORS and i < len(lowered) - 1:
+                cut = i
+                break
+    left = words[:cut] if cut is not None else list(words)
+    right = words[cut + 1:] if cut is not None else None
+
+    amount = 1.0
+    if left and NUMBER.match(left[0].replace(",", "")):
+        amount = float(left.pop(0).replace(",", ""))
+    elif left:
+        # "100c", "3.5kg": a number with its unit stuck to it.
+        glued = re.match(r"^(-?\d+(?:\.\d+)?)(.+)$", left[0])
+        if glued:
+            amount = float(glued.group(1))
+            left[0] = glued.group(2)
+    return amount, left, right
+
+
+def convert(amount, source, target):
+    base = amount * source.factor + source.offset
+    return (base - target.offset) / target.factor
+
+
+USAGE = """Type an amount, a unit, and what to turn it into.
+
+  conv 10 kg to lb         conv 100 c to f
+  conv 1 km to dm          conv 2.5 gib to mb
+  conv 10 inch in cm       conv kg               what kg can become
+
+Add your own in ~/.look/convert.units, one rule per line, in the same
+language the preset table is written in:
+
+  ft = 0.3048 m
+  story = 6 h
+  sprint = 10 d
+
+`convrules` opens that file, creating it if it is not there yet."""
+
+
+def copy_stdin():
+    data = sys.stdin.buffer.read()
+    for command in (["pbcopy"], ["wl-copy"], ["xclip", "-selection", "clipboard"],
+                    ["xsel", "--clipboard", "--input"], ["clip.exe"]):
+        try:
+            subprocess.run(command, input=data, check=True)
+            return
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            continue
+    die("no clipboard tool found (pbcopy, wl-copy, xclip, xsel, clip.exe)")
+
+
+def field(label, value):
+    return f"{label:<8}{value}"
+
+
+MODE = mode = sys.argv[1] if len(sys.argv) > 1 else ""
+words = " ".join(sys.argv[2:]).split()
+
+if mode == "copy":
+    copy_stdin()
+    sys.exit(0)
+
+if mode == "rules-show":
+    # What the rules block shows in the panel. Deliberately does NOT create
+    # the file: a preview runs merely because a row is selected, and writing
+    # to somebody's config for that would be a surprise.
+    if os.path.isfile(RULES):
+        print(open(RULES, encoding="utf-8").read().rstrip() or f"{RULES} is empty.")
+    else:
+        print(
+            f"Enter creates {RULES} and opens it.\n\n"
+            "Your own units go in there, one per line, in the same language\n"
+            "the preset table is written in:\n\n"
+            "  ft = 0.3048 m\n"
+            "  story = 6 h\n"
+            "  sprint = 10 story\n\n"
+            "The unit on the right has to be one convert already knows,\n"
+            "which includes anything you defined on an earlier line."
+        )
+    sys.exit(0)
+
+if mode == "rules":
+    # The "add a rule" half, as a file rather than a dialog: it is three lines
+    # of text, it belongs in your dotfiles, and an editor is better at it than
+    # anything a launcher could draw.
+    if not os.path.isfile(RULES):
+        os.makedirs(os.path.dirname(RULES), exist_ok=True)
+        with open(RULES, "w", encoding="utf-8") as handle:
+            handle.write(
+                "# Your own units, one per line. Same language as the presets:\n"
+                "#\n"
+                "#   name = <how many> <unit>\n"
+                "#\n"
+                "# The unit on the right has to be one convert already knows,\n"
+                "# which includes anything you defined on an earlier line.\n"
+                "# Names are case-insensitive and a trailing s is forgiven.\n"
+                "#\n"
+                "# ft = 0.3048 m\n"
+                "# story = 6 h\n"
+                "# sprint = 10 d\n"
+                "# cuppa = 0.284 l\n"
+            )
+    print(RULES)
+    sys.exit(0)
+
+if mode not in ("show", "line"):
+    die(f'no such mode: "{mode}"', "one of show, line, rules, rules-show, copy")
+
+if not words:
+    if mode == "show":
+        print(USAGE)
+        sys.exit(0)
+    die("nothing to convert", "try: conv 10 kg to lb")
+
+units, mine = table()
+amount, left, right = split_query(words)
+
+if not left:
+    die("no unit to convert from", "try: conv 10 kg to lb")
+
+source = find(units, " ".join(left))
+if source is None:
+    die(f'I do not know the unit "{" ".join(left)}".',
+        "Add it yourself with a line in ~/.look/convert.units, such as\n"
+        "`furlong = 201.168 m`, then type it. `conv` on its own lists what is there.")
+
+if right is None:
+    # A unit on its own is a question about the unit, not a conversion.
+    family = sorted({u.canon for u in units.values()
+                     if u.dimension == source.dimension and u.canon != source.canon})
+    print("\n".join([
+        f"{source.name} · {source.dimension}",
+        "",
+        field("INTO", " · ".join(family) if family else "nothing else yet"),
+        field("RULE", source.rule or f"the base unit of {source.dimension}"),
+        field("YOURS", f"{mine} rule{'' if mine == 1 else 's'} in {RULES}"
+                       if mine else f"none yet - convrules opens {RULES}"),
+    ]))
+    sys.exit(0)
+
+target = find(units, " ".join(right))
+if target is None:
+    die(f'I do not know the unit "{" ".join(right)}".',
+        "Add it yourself with a line in ~/.look/convert.units, then type it.")
+
+if source.dimension != target.dimension:
+    die(f"{source.name} is {source.dimension} and {target.name} is {target.dimension}.",
+        "Those do not convert into each other. `conv "
+        f"{source.name}` lists what {source.name} can become.")
+
+result = convert(amount, source, target)
+headline = f"{pretty(result)} {target.name}"
+
+if mode == "line":
+    sys.stdout.write(headline)
+    sys.exit(0)
+
+exact = repr(result)
+out = [
+    headline,
+    "",
+    field("FROM", f"{pretty(amount)} {source.name}"),
+]
+if exact != pretty(result):
+    out.append(field("EXACT", f"{exact} {target.name}"))
+out.append(field("RULE", target.rule or f"the base unit of {target.dimension}"))
+if mine:
+    out.append(field("YOURS", f"{mine} rule{'' if mine == 1 else 's'} in {RULES}"))
+print("\n".join(out))

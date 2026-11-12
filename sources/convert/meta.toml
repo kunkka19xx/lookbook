@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "Convert units"
+description = "Unit conversion from one typed line, offline, with your own units in a file you keep."
+platforms   = ["macos"]
+look        = "0.7.5"
+requires    = ["python3"]

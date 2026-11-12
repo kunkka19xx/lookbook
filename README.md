@@ -139,6 +139,7 @@ The **Platforms** column is what the author tested, not what might work. Where a
 | [emoji](sources/emoji)               | python3    | 1,800 rows generated from Unicode itself; the clearest case for `scope` | macOS                 |
 | [browser-bookmarks](sources/browser-bookmarks) | python3 | two bookmark stores read as one list; favicons borrowed from another source's cache | macOS |
 | [timezone](sources/timezone)         | python3, jq | `{arg}` and `connect` in one folder: a converter you type into, a clock that stays current | macOS                 |
+| [convert](sources/convert)           | python3    | one `{arg}` block over a table the user extends; a rules file as the second block | macOS                 |
 <!-- /index:sources -->
 
 ## The tiles
