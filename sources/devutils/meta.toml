@@ -4,4 +4,6 @@ name        = "Dev utils"
 description = "UUIDs, passwords, base64, SHA-256, URL encoding, epoch times and JSON, onto the clipboard."
 platforms   = ["macos", "linux"]
 look        = "0.7.5"
+# Empty on purpose: the clipboard tool is one of pbcopy, wl-copy, xclip or xsel
+# depending on platform, and requires means every name listed. See README.
 requires    = []
