@@ -1,0 +1,138 @@
+# GitHub's four "what needs me" lists, as rows: reviews waiting on you, your
+# own open pull requests, issues assigned to you, and your unread
+# notifications. Enter opens the page, Cmd+K copies the link.
+#
+# All four go through `gh`, which already holds your token, so there is no key
+# to put in this file and nothing here knows your password. If `gh auth status`
+# works in a terminal, these work.
+#
+# Each block is one network call on reload, never per keystroke. Four of them
+# is four or five seconds of the sixty-second reload budget, which is the one
+# thing worth knowing before you install all four: `enabled = false` on the
+# ones you do not want is cheaper than deleting them, and reversible.
+
+[github-review]
+name    = "Review requested"
+aliases = ["reviews"]
+icon    = "👀"
+format  = "json"
+scope   = true
+
+# `--review-requested=@me` is asked of the search API rather than of one repo,
+# so this spans every org you belong to. The author's login is in the subtitle
+# because on a review list it is the first thing you want: whose work is this.
+run = '''gh search prs --review-requested=@me --state=open --limit 30 \
+  --json repository,number,title,url,author | jq -c '.[] |
+  {id: .url, title: .title, icon: "👀",
+   subtitle: (.repository.nameWithOwner + " #" + (.number|tostring) + "  ·  " + .author.login)}' '''
+
+# 5s is not enough for two round trips on hotel wifi, and a `run` that times
+# out keeps the rows from last time, which reads as GitHub being quiet.
+timeout = "20s"
+
+# The row's id is the PR's web URL, so Enter hands it to your browser. Both
+# spellings, because only one of these commands exists on any given machine:
+# xdg-open is Linux, open is macOS. On Windows this is `start "" {id}` and
+# neither branch applies. The other three blocks repeat the line; a block's
+# verbs are its own, and there is nothing file-wide to put it in.
+open = "command -v xdg-open >/dev/null 2>&1 && xdg-open {id} || open {id}"
+
+# What the PR is, before you open it: state, size, branch, checks, review, then
+# the description. `gh pr view` on its own prints a column of label/value lines,
+# five of which are usually empty, so bin/github-preview asks for the fields it
+# wants and lays them out instead. A preview always gets 5 seconds, whatever
+# `timeout` says, and this spends about two of them.
+preview = "~/.look/bin/github-preview pr {id}"
+
+then = ["github-copy-link", "github-open-repo"]
+
+
+[github-prs]
+name    = "My pull requests"
+aliases = ["myprs"]
+icon    = "🔀"
+format  = "json"
+scope   = true
+
+run = '''gh search prs --author=@me --state=open --limit 30 \
+  --json repository,number,title,url,isDraft | jq -c '.[] |
+  {id: .url, title: .title,
+   icon: (if .isDraft then "📝" else "🔀" end),
+   subtitle: (.repository.nameWithOwner + " #" + (.number|tostring))}' '''
+timeout = "20s"
+open    = "command -v xdg-open >/dev/null 2>&1 && xdg-open {id} || open {id}"
+
+# Not the PR here: on your own PR the question is never "what is this", it is
+# "has CI gone green yet". Failing checks are listed first, since they are what
+# decides whether you can merge.
+preview = "~/.look/bin/github-preview checks {id}"
+
+then = ["github-copy-link", "github-open-repo"]
+
+
+[github-issues]
+name    = "My issues"
+aliases = ["myissues"]
+icon    = "🐛"
+format  = "json"
+scope   = true
+
+run = '''gh search issues --assignee=@me --state=open --limit 30 \
+  --json repository,number,title,url | jq -c '.[] |
+  {id: .url, title: .title, icon: "🐛",
+   subtitle: (.repository.nameWithOwner + " #" + (.number|tostring))}' '''
+timeout = "20s"
+open    = "command -v xdg-open >/dev/null 2>&1 && xdg-open {id} || open {id}"
+preview = "~/.look/bin/github-preview issue {id}"
+
+then = ["github-copy-link", "github-open-repo"]
+
+
+# Unread notifications, which is what `gh api notifications` answers by
+# default. The `reason` is in the subtitle because it is the whole difference
+# between a thread you have to read and one you were copied on.
+[github-notifications]
+name    = "GitHub notifications"
+aliases = ["notifs"]
+icon    = "🔔"
+format  = "json"
+scope   = true
+
+# The API hands back an API URL (api.github.com/repos/o/r/pulls/1), which is
+# JSON in a browser, so it is rewritten into the page a human wants. A
+# notification with no subject URL at all (a Discussion, a Release) falls back
+# to the repository page rather than becoming a row that opens nothing.
+run = '''gh api notifications --jq '.[] |
+  {id: ((.subject.url // .repository.html_url)
+        | sub("api\\.github\\.com/repos"; "github.com")
+        | sub("/pulls/"; "/pull/")),
+   title: .subject.title,
+   subtitle: (.repository.full_name + "  ·  " + .reason),
+   icon: (if .subject.type == "PullRequest" then "🔀"
+          elif .subject.type == "Issue" then "🐛" else "🔔" end)}' '''
+timeout = "20s"
+open    = "command -v xdg-open >/dev/null 2>&1 && xdg-open {id} || open {id}"
+
+# No preview: a notification row is already the title, the repo and the reason,
+# and the thread it points at may be a PR, an issue, a release or a discussion,
+# so there is no one command that can read all of them.
+
+then = ["github-copy-link", "github-open-repo"]
+
+
+# Reached with Cmd+K from any of the four. These rows carry no path, so Look's
+# own Cmd+C has nothing to copy from them, which is what makes this worth
+# declaring. The one macOS-only line in the file: on Linux `pbcopy` is
+# `wl-copy`, or `xclip -selection clipboard`.
+[github-copy-link]
+name = "Copy link"
+icon = "🔗"
+do   = ["printf %s {id} | pbcopy"]
+
+
+# The repository the row belongs to, which is two path segments up from any of
+# these URLs. sed rather than a second API call: the URL is already in hand.
+[github-open-repo]
+name = "Open repository"
+icon = "📦"
+do   = ['''open "$(printf %s {id} | sed -e 's#/pull/.*##' -e 's#/issues/.*##')"''']

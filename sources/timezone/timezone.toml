@@ -1,0 +1,46 @@
+# Timezone lookup and conversion from one typed line. Type "tz".
+#
+#   tz tokyo                 the time there now
+#   tz 3pm cet to jst        a conversion, with the date shift if there is one
+#   tz 9am gmt+8 in utc
+#   tz 3pm est               to your own zone, when the target is left out
+#
+# `{arg}` is the rest of the line after the word, and a `do` block is the only
+# kind that can take one. That is the whole reason this shape works: the
+# producer is not a list of rows made on reload, it is one row that reads what
+# you are typing right now.
+#
+# `preview` is where the answer appears, and it is the same command as `do`
+# with its output kept rather than shown. The panel gets five seconds; this
+# takes about fifty milliseconds, all of it Python starting up.
+#
+# Everything comes from the IANA database the operating system already ships,
+# through Python's own `zoneinfo`: no network, nothing embedded, and daylight
+# saving handled because the tzdb says what it is. bin/timezone is where the
+# parsing, the zone table and the DST edges live.
+
+[timezone-convert]
+name    = "Timezone"
+aliases = ["tz"]
+icon    = "🕒"
+
+# `tz` with nothing after it is a row like any other, and its panel is the list
+# of examples rather than an empty pane.
+preview = "~/.look/bin/timezone show {arg}"
+
+# Enter copies the headline, which is the one line you would paste into a
+# message: "11:00 PM JST". The clipboard command lives in the script, so there
+# is nothing platform-specific in this file.
+do = ["~/.look/bin/timezone line {arg} | ~/.look/bin/timezone copy"]
+
+
+# The same answer as a machine-readable instant. A separate word rather than a
+# second action on the row above, because a `then` target reached with Cmd+K
+# cannot see what you typed - `{arg}` is empty there, by design, since the
+# query that found a row is not an argument.
+[timezone-iso]
+name    = "Timezone as ISO 8601"
+aliases = ["tziso"]
+icon    = "📐"
+preview = "~/.look/bin/timezone iso {arg}"
+do      = ["~/.look/bin/timezone iso {arg} | ~/.look/bin/timezone copy"]

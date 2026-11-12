@@ -1,0 +1,53 @@
+# A world clock that is actually the time: one row per city, re-pushed every
+# time the minute changes. Type "clock".
+#
+# `connect` is the one producer that does not run and finish. Look starts the
+# program once and leaves it running, and the program pushes rows whenever it
+# likes. That is the whole reason this is not a `run` block: a `run` block's
+# rows are made on reload and cached until the next one, so its clock would
+# still read 09:50 an hour later.
+#
+# The work is in bin/timezone-clock, which is a connector in about a hundred
+# lines of bash. No timezone library and no Python: `TZ=Asia/Tokyo date` is the
+# whole calculation and costs about six milliseconds, and a resident bash
+# connector is a megabyte where a Python one is ten to fifteen.
+
+[timezone-clock]
+name = "World clock"
+icon = "🌍"
+
+# One alias, and deliberately not "time". A single-word alias on a scoped
+# block is reserved as the FIRST word of a line, and "time" would swallow
+# every search beginning with it - "time machine" is an app on this platform.
+aliases = ["clock"]
+
+# `scope = true` reserves "clock" as that first word, so `clock tokyo` narrows
+# to these rows. Without it the cities still rank normally in a plain search.
+scope = true
+
+# `~` is expanded by your shell, as in any other command. On Windows write
+# %USERPROFILE%\.look\bin\timezone-clock instead: cmd has no tilde expansion.
+#
+# The cities are set here rather than exported from your shell rc, because Look
+# runs commands through a LOGIN shell, which never reads ~/.zshrc or ~/.bashrc.
+connect = "LOOK_CLOCK_ZONES=America/Los_Angeles,America/New_York,Europe/London,Europe/Berlin,Asia/Kolkata,Asia/Singapore,Asia/Tokyo,Australia/Sydney ~/.look/bin/timezone-clock"
+
+# Both of these are the convert half's script, which is why the two files in
+# this folder share a bin/ and are installed together. The row's id is the IANA
+# zone name, which is exactly what that script takes as a query, so the panel
+# of a clock row is the same panel `tz tokyo` gives you - offset, date, how far
+# from you, and the ISO form.
+#
+# A `preview` declared here overrides whatever the connector would answer, and
+# that is on purpose: the program then has no preview to implement.
+preview = "~/.look/bin/timezone show {id}"
+open    = "~/.look/bin/timezone line {id} | ~/.look/bin/timezone copy"
+
+# Asked by the installer, because a world clock is only useful if they are
+# your cities.
+[[setup]]
+label = "Cities, as IANA zone names, in the order you want to read them"
+block = "timezone-clock"
+key   = "connect"
+match = "America/Los_Angeles,America/New_York,Europe/London,Europe/Berlin,Asia/Kolkata,Asia/Singapore,Asia/Tokyo,Australia/Sydney"
+note  = "Comma separated: Asia/Tokyo,Europe/Berlin,America/New_York. The city is the last part."

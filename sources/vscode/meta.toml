@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "VS Code projects"
+description = "Every project you have opened in VS Code lately, as a row. Enter reopens it."
+platforms   = ["macos"]
+look        = "0.7.5"
+requires    = ["python3"]

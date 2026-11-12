@@ -1,0 +1,111 @@
+# The eight one-liners you open a terminal, a browser tab or a "free online
+# tool" for. Type the word, then the value:
+#
+#   uuid                      a fresh UUID v4
+#   genpw 32                  a random password, 24 characters by default
+#   b64 hello world           base64, and b64d to decode
+#   sha256 hello world        the SHA-256 of what you typed
+#   urlenc a & b              percent-encoded, and urldec to decode
+#   epoch                     the time now, as a number
+#   epoch 1762900000          that number, as a time
+#   jsonfmt                   whatever JSON is on your clipboard, indented
+#
+# Every block is the same two lines, and that shape is the thing worth
+# copying:
+#
+#   preview = "<the transform>"              what the panel shows you
+#   do      = ["<the transform> | copy"]     what Enter keeps
+#
+# One command, named twice, so the answer you read is the answer you get. The
+# transform itself lives in bin/devutils, one case arm each: written inline
+# here it would be eighteen commands that have to agree, and the day two of
+# them disagree the panel lies. That script is also where everything
+# platform-specific lives - the clipboard, and the two `date` dialects - so
+# porting this is reading one function rather than ten `pbcopy`s.
+#
+# Adding your own is one arm in the script and one block here. `{arg}` is the
+# rest of the line after the word, and only a `do` block can take one, which
+# is why none of these is a list.
+
+# ---------------------------------------------------------------- generate --
+
+# The two that cannot preview the exact answer: it does not exist until Enter
+# runs. So they say so, and show a sample of the right shape. A preview quietly
+# showing a DIFFERENT UUID from the one about to be copied would be worse than
+# one that admits it.
+[devutils-uuid]
+name    = "UUID"
+aliases = ["uuid"]
+icon    = "🆔"
+preview = '''printf 'Enter copies a new UUID v4, like this one:\n\n  %s\n' "$(~/.look/bin/devutils uuid)"'''
+do      = ["~/.look/bin/devutils uuid | ~/.look/bin/devutils copy"]
+
+[devutils-password]
+name    = "Random password"
+aliases = ["genpw"]
+icon    = "🔑"
+preview = '''printf 'Enter copies a new password, like this one:\n\n  %s\n' "$(~/.look/bin/devutils genpw {arg})"'''
+do      = ["~/.look/bin/devutils genpw {arg} | ~/.look/bin/devutils copy"]
+
+
+# --------------------------------------------------------------- transform --
+# From here down, the preview IS the answer.
+
+[devutils-base64]
+name    = "Base64 encode"
+aliases = ["b64"]
+icon    = "🔡"
+preview = "~/.look/bin/devutils b64 {arg}"
+do      = ["~/.look/bin/devutils b64 {arg} | ~/.look/bin/devutils copy"]
+
+[devutils-base64-decode]
+name    = "Base64 decode"
+aliases = ["b64d"]
+icon    = "🔠"
+preview = "~/.look/bin/devutils b64d {arg}"
+do      = ["~/.look/bin/devutils b64d {arg} | ~/.look/bin/devutils copy"]
+
+[devutils-sha256]
+name    = "SHA-256"
+aliases = ["sha256"]
+icon    = "#️⃣"
+preview = "~/.look/bin/devutils sha256 {arg}"
+do      = ["~/.look/bin/devutils sha256 {arg} | ~/.look/bin/devutils copy"]
+
+# The one block with no tool behind it: `{arg:url}` IS percent-encoding, done
+# by Look before the shell sees the value. What comes out is only
+# A-Za-z0-9-._~%, which is also why it is the one substitution safe to quote.
+[devutils-urlencode]
+name    = "URL encode"
+aliases = ["urlenc"]
+icon    = "🔗"
+preview = "printf '%s\\n' {arg:url}"
+do      = ["printf %s {arg:url} | ~/.look/bin/devutils copy"]
+
+# The other direction has no such shortcut, so this is the one op that needs
+# python3. The script says so by name when it is missing.
+[devutils-urldecode]
+name    = "URL decode"
+aliases = ["urldec"]
+icon    = "🔓"
+preview = "~/.look/bin/devutils urldec {arg}"
+do      = ["~/.look/bin/devutils urldec {arg} | ~/.look/bin/devutils copy"]
+
+# Both directions in one block, because it is one question. Bare `epoch` is
+# the time now as a number; a number is that instant as a time, and eleven
+# digits or more is read as milliseconds.
+[devutils-epoch]
+name    = "Epoch time"
+aliases = ["epoch"]
+icon    = "⏱"
+preview = "~/.look/bin/devutils epoch {arg}"
+do      = ["~/.look/bin/devutils epoch {arg} | ~/.look/bin/devutils copy"]
+
+# Reads the clipboard rather than {arg}: JSON you want indented came out of a
+# log or a response body, never off your own keyboard. Needs jq.
+[devutils-json]
+name    = "Format JSON"
+aliases = ["jsonfmt"]
+icon    = "🧾"
+preview = "~/.look/bin/devutils json"
+do      = ["~/.look/bin/devutils json | ~/.look/bin/devutils copy"]

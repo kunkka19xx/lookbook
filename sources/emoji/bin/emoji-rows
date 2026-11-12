@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+"""Every emoji as a Look row: one JSON object per line.
+
+Declared by ~/.look/sources/emoji.toml. Look runs this on reload
+(Cmd/Ctrl+Shift+;), never per keystroke, so the cost is paid once and typing
+filters the snapshot.
+
+There is no emoji list in here and nothing is downloaded. The names come from
+`unicodedata`, which is the Unicode Character Database that ships with Python
+itself: the authority everyone else's emoji list is generated from. So the
+file stays small, the names are right, and a newer Python knows newer emoji
+with nothing to update here.
+
+What `unicodedata` does not have is how people search. Its name for 👍 is
+"thumbs up", and nobody types "thumbs"; they type "like", or "+1". The table
+below is that gap, hand-written and deliberately short: the ones worth the
+line.
+"""
+
+import json
+import os
+import sys
+import unicodedata
+
+# ----------------------------------------------------------------- settings --
+# Look runs this through a LOGIN shell, which does not read ~/.zshrc or
+# ~/.bashrc, so set these on the `run` line in emoji.toml instead:
+#
+#   run = "LOOK_EMOJI_LIMIT=600 ~/.look/bin/emoji-rows"
+
+# Look caps any block at 2,000 rows and warns when it has to. Staying under it
+# here means the list is trimmed by this file's own order - faces first - and
+# not by wherever the cap happens to land.
+LIMIT = int(os.environ.get("LOOK_EMOJI_LIMIT") or 1900)
+
+# The blocks that are actually emoji, in the order they are offered, so that a
+# truncated list keeps the ones people reach for. Faces and hands first,
+# then objects, then the older symbol blocks.
+#
+# Deliberately left out: the regional indicators (a flag is two of them, and
+# singly they are letters), the skin-tone modifiers (they only mean something
+# appended to another character), and the keycap and tag ranges.
+RANGES = [
+    (0x1F600, 0x1F64F),  # emoticons
+    (0x1F440, 0x1F4FF),  # eyes, hands, objects
+    (0x1F300, 0x1F43F),  # weather, plants, animals
+    (0x1F500, 0x1F5FF),  # symbols, office
+    (0x1F680, 0x1F6FF),  # transport
+    (0x1F900, 0x1F9FF),  # supplemental: more hands, people, food
+    (0x1FA70, 0x1FAFF),  # extended-A
+    (0x2600, 0x26FF),    # miscellaneous symbols
+    (0x2700, 0x27BF),    # dingbats
+    # Four slivers rather than their whole blocks: Miscellaneous Technical and
+    # Miscellaneous Symbols and Arrows are mostly not emoji at all, and taking
+    # them entire would bury the list in arrows and set notation. These are the
+    # runs inside them that people actually type.
+    (0x231A, 0x231B),    # watch, hourglass
+    (0x23E9, 0x23FA),    # media buttons, alarm clock, hourglass flowing
+    (0x2B50, 0x2B55),    # star, hollow red circle
+]
+
+# How people search for the ones whose Unicode name is not how anyone says it.
+# Added to the subtitle, which Look searches too, so `emo like` finds 👍
+# without the title having to lie about its name.
+ALSO = {
+    "👍": "like, +1, approve, yes",
+    "👎": "dislike, -1, no",
+    "🙏": "please, thanks, pray, highfive",
+    "👏": "clap, applause, well done",
+    "🎉": "tada, celebrate, party, ship it",
+    "🚀": "ship, launch, deploy, fast",
+    "🔥": "fire, hot, lit, burning",
+    "✅": "check, done, tick, pass",
+    "❌": "cross, no, fail, wrong",
+    "⚠": "warning, caution, careful",
+    "🐛": "bug, defect, issue",
+    "🚧": "wip, in progress, construction",
+    "👀": "eyes, looking, review, take a look",
+    "💯": "hundred, perfect, agree",
+    "🤔": "thinking, hmm, unsure",
+    "😅": "sweat, awkward, nervous laugh",
+    "🙃": "upside down, irony, sarcasm",
+    "😭": "crying, sobbing, painful",
+    "🥳": "party, celebrate, birthday",
+    "🤷": "shrug, who knows, no idea",
+    "💩": "poop, bad, garbage",
+    "🧠": "brain, smart, idea",
+    "🐳": "whale, docker, container",
+    "📝": "memo, note, write, docs",
+    "⏰": "alarm, clock, reminder, deadline",
+    "☕": "coffee, break, morning",
+    "🍕": "pizza, food, lunch",
+    "❤": "heart, love, red",
+    "⭐": "star, favourite, favorite",
+    "🔗": "link, url, chain",
+}
+
+def emit():
+    """Write every named character in RANGES, in order, and answer how many."""
+    rows = 0
+    for start, end in RANGES:
+        for codepoint in range(start, end + 1):
+            if rows >= LIMIT:
+                return rows
+            char = chr(codepoint)
+            try:
+                name = unicodedata.name(char)
+            except ValueError:
+                # Unassigned in this Python's Unicode version. A newer Python
+                # fills some of these in, which is the whole reason for reading
+                # the database rather than shipping a list.
+                continue
+
+            row = {
+                "id": char,
+                "title": name.lower(),
+                # The codepoint earns its place: it is what you paste into a
+                # regex, a font stack, or a bug report about the thing not
+                # rendering.
+                "subtitle": f"U+{codepoint:04X}",
+                # A per-row icon, so the list is the emoji themselves rather
+                # than 1,900 identical glyphs with the name beside them.
+                "icon": char,
+            }
+            extra = ALSO.get(char)
+            if extra:
+                row["subtitle"] += "  ·  " + extra
+
+            print(json.dumps(row, ensure_ascii=False))
+            rows += 1
+    return rows
+
+
+try:
+    written = emit()
+except BrokenPipeError:
+    # Look caps captured output at 256 KB and closes the pipe when it has
+    # enough. A trimmed run has to end quietly: a traceback here would be the
+    # first thing on the reload banner. Python flushes stdout again on the way
+    # out, which would raise a second time, so stdout is pointed at /dev/null
+    # first - the interpreter's own documented way out of this.
+    os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+    sys.exit(0)
+
+if written == 0:
+    # Printing nothing keeps the rows from the last good run, so this says why
+    # on stderr rather than leaving an empty list unexplained.
+    print("emoji-rows: this Python's unicodedata named nothing in any range", file=sys.stderr)

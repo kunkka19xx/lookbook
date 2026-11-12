@@ -1,0 +1,73 @@
+# Text you retype: an address, a standup template, a tricky SQL join, the
+# apology you send when CI is red. One file per snippet in ~/.look/snippets,
+# and Enter puts it on the clipboard.
+#
+# Snippets are plain files on purpose. Nothing is imported into a database, so
+# they are editable with Cmd+E, syncable with the rest of your dotfiles, and
+# greppable from a terminal. The preview pane shows what is in the one you have
+# selected, because a `dir` row IS the file, so this needs no `preview` of its
+# own.
+
+[snippets]
+name    = "Snippets"
+aliases = ["snip"]
+icon    = "✂️"
+
+# Any file in the folder, and one level of folders inside it, so you can keep
+# `sql/` and `email/` apart. Hidden files are always skipped, so a .DS_Store
+# never becomes a row. No `match`, because a snippet is as likely to be .sql,
+# .json or no extension at all as it is to be .txt.
+dir   = "~/.look/snippets"
+depth = 2
+only  = "files"
+
+# `scope = true` reserves "snip" as the FIRST word of a line, so `snip sql`
+# searches your snippets rather than your whole machine.
+scope = true
+
+# Enter copies the contents. Without this line Enter would open the file in
+# your editor, which is what Look does with any file and not what you want from
+# a snippet. Paste it yourself afterwards: Look hides as it copies, so Cmd+V
+# lands in whatever you were typing in.
+#
+# macOS as written. Linux: `wl-copy < {path}` on Wayland, or
+# `xclip -selection clipboard < {path}` on X11. Windows: `clip < {path}`.
+open = "pbcopy < {path}"
+
+then = ["snippets-new"]
+
+
+# The other direction: something is on your clipboard and you want to keep it.
+# Type `snipnew signature` and it is saved under that name.
+#
+# `{arg}` is the rest of the line after the word, which is why this is a row
+# you can type for rather than something reachable only through Cmd+K.
+#
+# The folder and the name are taken into shell variables first, which buys
+# three things: the folder is written once, so the installer can ask for it
+# with one `match`; a name with a space in it is quoted at the redirect rather
+# than at the substitution; and no name at all falls back to the time rather
+# than writing a file called ".txt" that Look would never show you, since it
+# skips hidden files.
+[snippets-new]
+name    = "New snippet from clipboard"
+aliases = ["snipnew"]
+icon    = "📋"
+do      = ['''dir=~/.look/snippets; name={arg}; [ -n "$name" ] || name="clip-$(date +%Y%m%d-%H%M%S)"; mkdir -p "$dir" && pbpaste > "$dir"/"$name".txt''']
+
+
+# Asked by the installer. Two fields because the folder is named twice, once
+# per block, and each field replaces one word of one value.
+[[setup]]
+label = "Folder your snippets live in"
+type  = "folder"
+block = "snippets"
+key   = "dir"
+
+[[setup]]
+label = "The same folder, for New snippet from clipboard"
+type  = "folder"
+block = "snippets-new"
+key   = "do"
+match = "~/.look/snippets"
+

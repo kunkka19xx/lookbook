@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "Timezone"
+description = "Timezone lookup and conversion from one typed line, offline, plus a live world clock."
+platforms   = ["macos"]
+look        = "0.7.5"
+requires    = ["python3"]

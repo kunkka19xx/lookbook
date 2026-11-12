@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+"""Recently opened VS Code projects as Look rows: one JSON object per line.
+
+Declared by ~/.look/sources/vscode.toml. Look runs this on reload
+(Cmd/Ctrl+Shift+;), never per keystroke, so the cost is paid once and typing
+filters the snapshot.
+
+Where the list comes from: every editor in the VS Code family keeps its own
+`state.vscdb`, a plain SQLite file, and the recent list lives in it under one
+key as JSON. Nothing here talks to a running editor, so it works with every
+window closed.
+
+Python rather than sqlite3 + jq, for one reason: the entries are `file://`
+URIs, and turning one back into a path means percent-decoding. `jq` cannot,
+and a `sed` that tries is wrong on the first project with a space in its name.
+"""
+
+import json
+import os
+import shutil
+import sqlite3
+import sys
+import tempfile
+from urllib.parse import unquote, urlparse
+
+# ----------------------------------------------------------------- settings --
+# Each can also be set as an environment variable. Look runs this through a
+# LOGIN shell, which does not read ~/.zshrc or ~/.bashrc, so exporting one
+# there will not reach it. The reliable place is the `run` line in
+# vscode.toml, where it also sits next to what it affects:
+#
+#   run = "LOOK_VSCODE_FLAVORS=Cursor ~/.look/bin/vscode-recents"
+
+# Which editors to read, by the directory name each one uses. "auto" is every
+# flavour below whose state database exists.
+FLAVORS = os.environ.get("LOOK_VSCODE_FLAVORS", "auto")
+
+# How many rows at most, newest first. Look caps a block at 2,000 anyway, and
+# a recent list longer than a screenful of scrolling is not a recent list.
+LIMIT = int(os.environ.get("LOOK_VSCODE_LIMIT") or 150)
+
+# The directory name per editor, in the order they are merged. The name is the
+# same on macOS and Linux; only the directory holding them differs.
+KNOWN = ["Code", "Code - Insiders", "VSCodium", "Cursor", "Windsurf"]
+
+# The key VS Code files the recent list under, unchanged since 1.4x.
+RECENT_KEY = "history.recentlyOpenedPathsList"
+
+
+def support_dir():
+    """Where this platform keeps per-application configuration."""
+    home = os.path.expanduser("~")
+    if sys.platform == "darwin":
+        return os.path.join(home, "Library", "Application Support")
+    # Linux, and anything else XDG-shaped.
+    return os.environ.get("XDG_CONFIG_HOME") or os.path.join(home, ".config")
+
+
+def state_db(flavor):
+    return os.path.join(support_dir(), flavor, "User", "globalStorage", "state.vscdb")
+
+
+def entries(db):
+    """The recent list in one state database, or [] if it cannot be read.
+
+    A running editor holds a write lock and checkpoints lazily, so the file is
+    read from a copy taken WITH its -wal: no lock is taken, and this session's
+    entries are not missing. No -shm, which SQLite rebuilds from the WAL.
+    """
+    tmp = tempfile.mkdtemp(prefix="look-vscode-")
+    try:
+        copy = os.path.join(tmp, "state.vscdb")
+        shutil.copyfile(db, copy)
+        if os.path.exists(db + "-wal"):
+            shutil.copyfile(db + "-wal", copy + "-wal")
+        with sqlite3.connect(copy) as conn:
+            row = conn.execute(
+                "SELECT value FROM ItemTable WHERE key = ?", (RECENT_KEY,)
+            ).fetchone()
+    except (OSError, sqlite3.Error) as err:
+        print(f"vscode-recents: {db}: {err}", file=sys.stderr)
+        return []
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+    if not row:
+        return []
+    try:
+        return json.loads(row[0]).get("entries", [])
+    except (TypeError, ValueError) as err:
+        print(f"vscode-recents: {db}: {RECENT_KEY} is not JSON ({err})", file=sys.stderr)
+        return []
+
+
+def path_of(entry):
+    """One entry as (path, kind), or (None, None) for one with no local path.
+
+    Three shapes, and a fourth that is deliberately dropped: a remote entry
+    (`vscode-remote://`, a container, a Codespace) has no path on this machine,
+    so a row for it could not be opened, previewed or revealed.
+    """
+    for key, kind in (("folderUri", "folder"), ("fileUri", "file")):
+        if key in entry:
+            uri = entry[key]
+            break
+    else:
+        workspace = entry.get("workspace") or {}
+        uri, kind = workspace.get("configPath"), "workspace"
+
+    if not uri:
+        return None, None
+    parsed = urlparse(uri)
+    if parsed.scheme != "file" or parsed.netloc not in ("", "localhost"):
+        return None, None
+    return unquote(parsed.path), kind
+
+
+ICON = {"folder": "📁", "file": "📄", "workspace": "🗂"}
+
+flavors = KNOWN if FLAVORS == "auto" else [f.strip() for f in FLAVORS.replace(",", " ").split()]
+if FLAVORS != "auto":
+    for flavor in flavors:
+        if flavor not in KNOWN:
+            print(
+                f"LOOK_VSCODE_FLAVORS: no editor directory called {flavor!r} "
+                f"(known: {', '.join(KNOWN)})",
+                file=sys.stderr,
+            )
+
+found = [(flavor, state_db(flavor)) for flavor in flavors if os.path.isfile(state_db(flavor))]
+if not found:
+    # Printing nothing keeps the rows from the last good run, which is why this
+    # says it on stderr and exits 0 rather than failing.
+    print(
+        "vscode-recents: no editor state database under " + support_dir(),
+        file=sys.stderr,
+    )
+    sys.exit(0)
+
+home = os.path.expanduser("~")
+seen = set()
+rows = []
+for flavor, db in found:
+    for entry in entries(db):
+        path, kind = path_of(entry)
+        # Still in the list long after the folder was deleted or renamed, and a
+        # row that cannot open is worse than a shorter list.
+        if not path or path in seen or not os.path.exists(path):
+            continue
+        seen.add(path)
+
+        parent = os.path.dirname(path.rstrip("/")) or "/"
+        if parent == home or parent.startswith(home + os.sep):
+            parent = "~" + parent[len(home):]
+        # Which editor, only when more than one is being merged: on the normal
+        # one-editor machine it would be the same word on every row.
+        subtitle = parent if len(found) == 1 else f"{parent}  ·  {flavor}"
+
+        rows.append(
+            {
+                "id": path,
+                "title": entry.get("label") or os.path.basename(path.rstrip("/")) or path,
+                "subtitle": subtitle,
+                "path": path,
+                "icon": ICON[kind],
+            }
+        )
+        if len(rows) >= LIMIT:
+            break
+
+for row in rows:
+    print(json.dumps(row, ensure_ascii=False))

@@ -1,0 +1,560 @@
+#!/usr/bin/env python3
+"""Timezone lookup and conversion, offline, from one typed line.
+
+Declared by ~/.look/sources/timezone.toml.
+
+    timezone show tokyo               the panel for `tz tokyo`
+    timezone show 3pm cet to jst      the panel for a conversion
+    timezone line 3pm cet to jst      the one line Enter copies
+    timezone iso  3pm cet to jst      the same instant as ISO 8601
+    timezone copy                     stdin onto the clipboard
+
+Everything comes from the IANA database the operating system already ships,
+through Python's own `zoneinfo`. Nothing is downloaded, nothing is embedded
+here, and daylight saving is therefore not this file's problem: a conversion
+across a transition is right because the tzdb says so.
+
+WHY THE ZONE TABLE IS SHORT. Cities resolve against the tzdb itself: the last
+segment of every zone name, underscores read as spaces, so `new york`,
+`kuala lumpur` and `sao paulo` cost no lines here. What a table is genuinely
+needed for is the two things the database cannot answer - abbreviations
+(`jst`, `cet`), which are not zone names at all, and nicknames (`nyc`, `sf`,
+`bangalore`) - which is all ZONES below holds.
+"""
+
+import os
+import re
+import subprocess
+import sys
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError, available_timezones
+
+# ----------------------------------------------------------------- settings --
+# Look runs this through a LOGIN shell, which does not read ~/.zshrc, so set
+# these on the lines in timezone.toml rather than exporting them:
+#
+#   preview = "LOOK_TZ_24H=1 ~/.look/bin/timezone show {arg}"
+
+# 12-hour clock by default, because that is what the people who ask for this
+# are usually pasting into a message. 1 switches to 24-hour.
+USE_24H = os.environ.get("LOOK_TZ_24H", "") not in ("", "0", "false", "no")
+
+# Your own zone, when the machine's is not the one you think in. An IANA name.
+HOME_ZONE = os.environ.get("LOOK_TZ_HOME", "")
+
+# An abbreviation is not a zone: `JST` names an offset, `Asia/Tokyo` names a
+# place with a history of them. People type the abbreviation and mean the
+# place, so each of these resolves to the place - which is also what makes
+# `3pm est` right in both January and July.
+#
+# Three abbreviations genuinely mean more than one place. They resolve to the
+# commonest reading and SAY SO in the panel, because silently picking one of
+# two continents is the worst thing this file could do.
+AMBIGUOUS = {
+    "ist": "India. Israel is Asia/Jerusalem, Ireland is Europe/Dublin",
+    "cst": "the US Central zone. China is Asia/Shanghai, Cuba is America/Havana",
+    "bst": "British summer time. Bangladesh is Asia/Dhaka",
+}
+
+ZONES = {
+    # North America
+    "est": "America/New_York", "edt": "America/New_York",
+    "cst": "America/Chicago", "cdt": "America/Chicago",
+    "mst": "America/Denver", "mdt": "America/Denver",
+    "pst": "America/Los_Angeles", "pdt": "America/Los_Angeles",
+    "akst": "America/Anchorage", "akdt": "America/Anchorage",
+    "hst": "Pacific/Honolulu",
+    "nyc": "America/New_York", "ny": "America/New_York",
+    "sf": "America/Los_Angeles", "san francisco": "America/Los_Angeles",
+    "la": "America/Los_Angeles", "bay area": "America/Los_Angeles",
+    "usa": "America/New_York", "us": "America/New_York",
+    # Europe
+    "cet": "Europe/Paris", "cest": "Europe/Paris",
+    "eet": "Europe/Athens", "eest": "Europe/Athens",
+    "wet": "Europe/Lisbon", "west": "Europe/Lisbon",
+    "bst": "Europe/London", "gb": "Europe/London", "uk": "Europe/London",
+    "msk": "Europe/Moscow",
+    "kiev": "Europe/Kyiv",
+    "germany": "Europe/Berlin", "france": "Europe/Paris",
+    "spain": "Europe/Madrid", "italy": "Europe/Rome",
+    "netherlands": "Europe/Amsterdam", "poland": "Europe/Warsaw",
+    # Asia and the Middle East
+    "jst": "Asia/Tokyo", "japan": "Asia/Tokyo",
+    "kst": "Asia/Seoul", "korea": "Asia/Seoul",
+    "ist": "Asia/Kolkata", "india": "Asia/Kolkata",
+    "delhi": "Asia/Kolkata", "mumbai": "Asia/Kolkata",
+    "bangalore": "Asia/Kolkata", "bengaluru": "Asia/Kolkata",
+    "pkt": "Asia/Karachi",
+    "gst": "Asia/Dubai",
+    "sgt": "Asia/Singapore",
+    "hkt": "Asia/Hong_Kong",
+    "china": "Asia/Shanghai", "beijing": "Asia/Shanghai",
+    "ict": "Asia/Bangkok", "saigon": "Asia/Ho_Chi_Minh",
+    "wib": "Asia/Jakarta",
+    "pht": "Asia/Manila",
+    "israel": "Asia/Jerusalem",
+    # Oceania
+    "aest": "Australia/Sydney", "aedt": "Australia/Sydney",
+    "acst": "Australia/Adelaide", "acdt": "Australia/Adelaide",
+    "awst": "Australia/Perth",
+    "nzst": "Pacific/Auckland", "nzdt": "Pacific/Auckland",
+    "nz": "Pacific/Auckland",
+    # Africa and South America
+    "sast": "Africa/Johannesburg",
+    "eat": "Africa/Nairobi", "wat": "Africa/Lagos", "cat": "Africa/Maputo",
+    "brt": "America/Sao_Paulo", "brazil": "America/Sao_Paulo",
+    "art": "America/Argentina/Buenos_Aires",
+    "mexico": "America/Mexico_City",
+}
+
+SEPARATORS = {"to", "in", "as", "->", "→", "at"}
+
+
+# Set from argv at the bottom. It decides where an error belongs, which is
+# not the same place in every mode.
+MODE = ""
+
+
+def die(message, *hints):
+    """Say what went wrong, in the one place this mode can show it.
+
+    In `show` mode the error IS the panel, so it goes to stdout and the whole
+    of it is rendered. Look shows only the FIRST line of a command's stderr,
+    so a hint written there is a hint nobody reads.
+
+    In the modes that feed a pipe it has to be stderr, and stdout has to stay
+    empty: whatever this prints there would be copied to the clipboard.
+    """
+    if MODE == "show":
+        print("\n\n".join((message, *hints)))
+        sys.exit(0)
+    print(f"timezone: {message}", file=sys.stderr)
+    for hint in hints:
+        print(f"  {hint}", file=sys.stderr)
+    sys.exit(1)
+
+
+# ------------------------------------------------------------------- zones --
+def dedupe(parts):
+    """Join with the separator, dropping a part that already appeared.
+
+    A zone's label, its abbreviation and its offset are three different facts,
+    and for UTC or a fixed offset two of them are the same word.
+    """
+    seen = []
+    for part in parts:
+        if part and part not in seen:
+            seen.append(part)
+    return " · ".join(seen)
+
+
+def abbr_of(moment):
+    """A zone's abbreviation, or nothing when it only has an offset to show."""
+    abbr = moment.strftime("%Z")
+    return abbr if abbr and not abbr.startswith(("+", "-", "UTC+", "UTC-")) else ""
+
+
+def city_index():
+    """Every zone name by its last segment, so `new york` resolves itself."""
+    index = {}
+    for name in available_timezones():
+        key = name.rsplit("/", 1)[-1].replace("_", " ").lower()
+        index.setdefault(key, set()).add(name)
+    return index
+
+
+CITIES = city_index()
+
+# utc, gmt+8, utc-3:30, +05:30, z
+OFFSET = re.compile(r"^(?:utc|gmt|z)?(?:(?P<sign>[+-])(?P<h>\d{1,2})(?::?(?P<m>\d{2}))?)?$")
+
+
+def local_zone():
+    """This machine's own zone, named if it can be, as (tzinfo, label).
+
+    `datetime.now().astimezone()` gives a working zone but only an
+    abbreviation to call it by, and "JST" is not something the rest of this
+    file can convert with. /etc/localtime is a symlink into the tzdb on both
+    macOS and Linux, which is where the IANA name actually is.
+    """
+    if HOME_ZONE:
+        return ZoneInfo(HOME_ZONE), HOME_ZONE
+
+    for candidate in (os.environ.get("TZ", ""), os.path.realpath("/etc/localtime")):
+        if "zoneinfo/" in candidate:
+            candidate = candidate.split("zoneinfo/", 1)[1]
+        if not candidate:
+            continue
+        try:
+            return ZoneInfo(candidate), candidate
+        except (ZoneInfoNotFoundError, ValueError):
+            continue
+
+    # Windows, a container with no /etc/localtime, a TZ nobody recognises: the
+    # offset is still right, there is just no name to print.
+    return datetime.now().astimezone().tzinfo, "your local time"
+
+
+def lookup(want):
+    """One zone as (tzinfo, label, note), or None when nothing matches.
+
+    Separate from resolve() so that a failure can ask this again about part
+    of what was typed, which is what turns "I do not know jst clock" into
+    "did you mean jst?".
+    """
+
+    # A fixed offset, which is a zone with no place and no DST. Kept first
+    # because `utc` would otherwise match two tzdb entries.
+    match = OFFSET.match(want.replace(" ", ""))
+    if match and (want.startswith(("utc", "gmt", "z", "+", "-"))):
+        if not match.group("sign"):
+            return timezone.utc, "UTC", None
+        hours = int(match.group("h"))
+        minutes = int(match.group("m") or 0)
+        if hours > 18 or minutes > 59:
+            die(f'"{want}" is not a real offset', "the range is UTC-12:00 to UTC+14:00")
+        delta = timedelta(hours=hours, minutes=minutes)
+        if match.group("sign") == "-":
+            delta = -delta
+        label = "UTC" + match.group("sign") + f"{hours:02d}:{minutes:02d}"
+        return timezone(delta), label, "a fixed offset, so it never shifts for DST"
+
+    note = None
+    if want in ZONES:
+        name = ZONES[want]
+        if want in AMBIGUOUS:
+            note = f'"{want.upper()}" read as {AMBIGUOUS[want]}'
+    else:
+        # Everything that could be meant: the name spelled out, and every
+        # zone whose last segment is this word.
+        spelled = want.replace(" ", "_")
+        hits = {z for z in available_timezones() if z.lower() == spelled}
+        hits |= CITIES.get(want, set())
+
+        # The tzdb also carries one-word backward-compatibility names
+        # (Singapore, Japan, Hongkong) for zones that have a Region/City
+        # spelling too, and those are the same zone rather than a choice. So
+        # prefer the regional ones, and only say anything when two of THOSE
+        # collide - which is a real ambiguity, like Indiana's two Indianapolis.
+        regional = {z for z in hits if "/" in z} or hits
+        if len(regional) == 1:
+            name = next(iter(regional))
+        elif regional:
+            name = sorted(regional)[0]
+            note = f'"{want}" matches {len(regional)} zones; using {name}'
+        else:
+            return None
+    try:
+        return ZoneInfo(name), name, note
+    except (ZoneInfoNotFoundError, ValueError):
+        die(f'the system has no timezone database entry for "{name}"')
+
+
+def resolve(text):
+    """One zone, as (tzinfo, label, note). Dies with advice when there is none."""
+    want = " ".join(text.split()).strip().lower()
+    if not want:
+        tz, label = local_zone()
+        return tz, label, None
+
+    found = lookup(want)
+    if found:
+        return found
+
+    # A zone nobody recognises is usually a zone with a word stuck to it -
+    # "jst clock", "cet please", "tokyo time" - because a launcher is one
+    # line and people keep typing. So ask again about each word on its own,
+    # and if exactly one of them is a zone, say which.
+    words = want.split()
+    if len(words) > 1:
+        usable = []
+        for word in words:
+            if lookup(word) and word not in usable:
+                usable.append(word)
+        if len(usable) == 1:
+            die(
+                f'I do not know the zone "{text}"',
+                f'did you mean "{usable[0]}"? The rest of the line is not part of a zone name.',
+            )
+
+    die(
+        f'I do not know the zone "{text}".',
+        "A zone is an IANA name (Asia/Tokyo), a city (tokyo, new york),\n"
+        "an abbreviation (jst, cet, pst) or an offset (gmt+8).",
+    )
+
+
+# -------------------------------------------------------------------- times --
+CLOCK = re.compile(r"^(?P<h>\d{1,2})(?::(?P<m>\d{2}))?(?::(?P<s>\d{2}))?\s*(?P<ampm>am|pm)?$")
+
+
+def parse_clock(token):
+    """A time of day, or None if this token is not one."""
+    want = token.strip().lower()
+    if want in ("now", "today"):
+        return "now"
+    if want == "noon":
+        return 12, 0, 0
+    if want == "midnight":
+        return 0, 0, 0
+    match = CLOCK.match(want)
+    if not match:
+        return None
+    hour = int(match.group("h"))
+    minute = int(match.group("m") or 0)
+    second = int(match.group("s") or 0)
+    ampm = match.group("ampm")
+    if ampm:
+        if hour < 1 or hour > 12:
+            return None
+        hour = hour % 12 + (12 if ampm == "pm" else 0)
+    elif hour > 23 or match.group("m") is None:
+        # A bare number with no am/pm and no colon is a year, a port or a
+        # count far more often than it is an hour, so it is left to the zone
+        # parser rather than guessed at.
+        return None
+    if minute > 59 or second > 59:
+        return None
+    return hour, minute, second
+
+
+def split_query(words):
+    """(clock, source words, target words) out of what was typed."""
+    lowered = [w.lower() for w in words]
+    cut = next((i for i, w in enumerate(lowered) if w in SEPARATORS), None)
+    left = words[:cut] if cut is not None else list(words)
+    right = words[cut + 1:] if cut is not None else []
+
+    clock = parse_clock(left[0]) if left else None
+    if clock is not None:
+        left = left[1:]
+    # "tokyo 3pm" as well as "3pm tokyo", because both get typed.
+    elif left and parse_clock(left[-1]) is not None:
+        clock = parse_clock(left[-1])
+        left = left[:-1]
+    return clock, left, right
+
+
+# ------------------------------------------------------------------ answers --
+def dst_note(moment, tz):
+    """What to say when the wall time asked for is not a normal one.
+
+    Two cases, both at a transition: a time that happened twice, and one that
+    never happened at all. zoneinfo answers either way rather than raising, so
+    the panel is where this gets said.
+    """
+    if not isinstance(tz, ZoneInfo):
+        return None
+
+    # Nonexistent first. PEP 495 gives a time inside the spring-forward gap
+    # two different offsets for fold=0 and fold=1 as well, so the ambiguity
+    # test below fires on both cases and cannot tell them apart. This one can:
+    # a time that never happened does not survive a round trip through UTC.
+    normalised = moment.astimezone(timezone.utc).astimezone(tz)
+    if (normalised.hour, normalised.minute) != (moment.hour, moment.minute):
+        return (
+            f"{moment.strftime('%H:%M')} does not exist in {tz.key} that day - "
+            f"the clocks jump to {normalised.strftime('%H:%M')}"
+        )
+
+    if moment.replace(fold=0).utcoffset() != moment.replace(fold=1).utcoffset():
+        return (
+            f"{moment.strftime('%H:%M')} happens twice in {tz.key} that day - "
+            "the earlier one was used"
+        )
+    return None
+
+
+def answer(words):
+    """Everything the three output modes need, worked out once."""
+    clock, source_words, target_words = split_query(words)
+    source_tz, source_label, source_note = resolve(" ".join(source_words))
+
+    if target_words:
+        target_tz, target_label, target_note = resolve(" ".join(target_words))
+    elif clock is None:
+        # `tz tokyo` is a lookup, not a conversion: the answer is the time
+        # there, not that time expressed where you are already sitting.
+        target_tz, target_label, target_note = source_tz, source_label, None
+    else:
+        target_tz, target_label, target_note = resolve("")
+
+    if clock is None or clock == "now":
+        source_at = datetime.now(tz=source_tz)
+        asked = "now"
+    else:
+        hour, minute, second = clock
+        source_at = datetime.now(tz=source_tz).replace(
+            hour=hour, minute=minute, second=second, microsecond=0
+        )
+        asked = "clock"
+
+    return {
+        "source": source_at,
+        "source_label": source_label,
+        "target": source_at.astimezone(target_tz),
+        "target_label": target_label,
+        "asked": asked,
+        "notes": [n for n in (source_note, target_note, dst_note(source_at, source_tz)) if n],
+    }
+
+
+def clock_of(moment):
+    if USE_24H:
+        return moment.strftime("%H:%M")
+    # Not "%-I", which is a BSD and glibc extension that Windows rejects.
+    return f"{moment.hour % 12 or 12}:{moment:%M} {'AM' if moment.hour < 12 else 'PM'}"
+
+
+def offset_of(moment):
+    """UTC+09:00, from the four digits strftime gives."""
+    raw = moment.strftime("%z")
+    return f"UTC{raw[:3]}:{raw[3:]}" if raw else "UTC"
+
+
+def zone_of(moment):
+    return dedupe([abbr_of(moment), offset_of(moment)])
+
+
+def day_shift(a, b):
+    days = (b.date() - a.date()).days
+    if days == 0:
+        return ""
+    return f"  ·  {days:+d} day" + ("s" if abs(days) != 1 else "")
+
+
+def gap(a, b, subject):
+    """How far b's clock is from a's, said the way a person says it.
+
+    The whole phrase, not the number, because English puts "of" after "ahead"
+    and not after "behind", and three call sites would get that wrong
+    separately.
+    """
+    minutes = int((b.utcoffset() - a.utcoffset()).total_seconds() // 60)
+    if minutes == 0:
+        return f"the same time as {subject}"
+    hours, rest = divmod(abs(minutes), 60)
+    amount = f"{hours}h" + (f" {rest}m" if rest else "")
+    return f"{amount} ahead of {subject}" if minutes > 0 else f"{amount} behind {subject}"
+
+
+def line(result):
+    """The one line Enter copies.
+
+    The zone's own abbreviation when it has a real one, and the UTC form when
+    the tzdb only gives it a numeric one: "9:50 AM +08" is not something to
+    paste into a message, "9:50 AM UTC+08:00" is.
+    """
+    moment = result["target"]
+    return f"{clock_of(moment)} {abbr_of(moment) or offset_of(moment)}"
+
+
+def show(result):
+    """The panel: the answer alone, then everything it was worked out from.
+
+    A preview command's output is drawn as plain text - markdown is only
+    honoured for a connector's preview, which this is not - so the hierarchy
+    has to come from the layout. Hence the label gutter: every supporting line
+    is labelled and aligned, which leaves the answer as the one line with
+    nothing in front of it.
+    """
+    target, source = result["target"], result["source"]
+    here = datetime.now(tz=local_zone()[0])
+    converted = result["target_label"] != result["source_label"]
+
+    def field(label, value):
+        return f"{label:<7}{value}"
+
+    out = [
+        f"{line(result)}{day_shift(source, target)}",
+        "",
+        field("ZONE", dedupe([result["target_label"], *zone_of(target).split(" · ")])),
+        field("DATE", target.strftime("%a %d %b %Y")),
+    ]
+
+    if converted:
+        out.append(field("FROM", dedupe([
+            f"{clock_of(source)} {abbr_of(source)}".rstrip(),
+            result["source_label"] if result["source_label"] != abbr_of(source) else "",
+            source.strftime("%a %d %b"),
+        ])))
+        out.append(field("SHIFT", gap(source, target, result["source_label"])))
+        if target.utcoffset() != here.utcoffset():
+            # Continuation of SHIFT, so no label of its own: two facts about
+            # the same thing read as one entry.
+            out.append(field("", gap(here, target, "you")))
+    elif target.utcoffset() != here.utcoffset():
+        out.append(field("SHIFT", gap(here, target, "you")))
+
+    out.append(field("ISO", target.isoformat(timespec="seconds")))
+
+    # Labelled like everything else rather than left as a loose paragraph at
+    # the bottom: a caveat about whether the answer is even the one you meant
+    # should be findable in the same column as the rest.
+    for note in result["notes"]:
+        out.append(field("NOTE", note))
+    return "\n".join(out)
+
+
+USAGE = """Type a zone, or a time and two zones.
+
+  tz tokyo                 the time there now
+  tz 3pm cet to jst        a conversion
+  tz 14:00 cet to jst      24-hour clocks work too
+  tz now tokyo in london
+  tz 9am gmt+8 in utc
+  tz 3pm est               to your own zone, when the target is left out
+
+Zones are IANA names (Asia/Tokyo), cities (new york, kuala lumpur),
+abbreviations (jst, cet, pst) or offsets (gmt+8).
+
+Enter copies the first line of the answer. `tziso` copies the ISO 8601 form."""
+
+
+def copy_stdin():
+    """stdin onto this platform's clipboard. The one platform-specific thing."""
+    data = sys.stdin.buffer.read()
+    for command in (
+        ["pbcopy"],
+        ["wl-copy"],
+        ["xclip", "-selection", "clipboard"],
+        ["xsel", "--clipboard", "--input"],
+        ["clip.exe"],
+    ):
+        try:
+            subprocess.run(command, input=data, check=True)
+            return
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            continue
+    die("no clipboard tool found (pbcopy, wl-copy, xclip, xsel, clip.exe)")
+
+
+MODE = mode = sys.argv[1] if len(sys.argv) > 1 else ""
+
+# Look shell-escapes a substitution, so `timezone show {arg}` arrives as ONE
+# argument holding the whole line - while the same command typed in a terminal
+# arrives as several. Joining and re-splitting is what makes both work, and is
+# the one thing about this script that is about Look rather than about time.
+words = " ".join(sys.argv[2:]).split()
+
+if mode == "copy":
+    copy_stdin()
+    sys.exit(0)
+if mode not in ("show", "line", "iso"):
+    die(f'no such mode: "{mode}"', "one of show, line, iso, copy")
+
+if not words:
+    # `tz` with nothing after it is a row like any other, and this is the
+    # panel it shows: the examples, rather than an empty pane.
+    if mode == "show":
+        print(USAGE)
+        sys.exit(0)
+    die("nothing to convert", "try: tz 3pm cet to jst")
+
+result = answer(words)
+if mode == "show":
+    print(show(result))
+elif mode == "line":
+    sys.stdout.write(line(result))
+else:
+    sys.stdout.write(result["target"].isoformat(timespec="seconds"))

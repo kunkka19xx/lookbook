@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+# The panel for one GitHub row. Declared by ~/.look/sources/github.toml.
+#
+#   github-preview pr     <url>    a pull request
+#   github-preview checks <url>    its checks, failing ones first
+#   github-preview issue  <url>    an issue
+#
+# WHY NOT JUST `gh pr view`. Because its unattended output is a column of
+# `label:<tab>value` lines, five of which are usually empty (labels,
+# assignees, reviewers, projects, milestone), and one of which is the URL the
+# row already shows. In a panel forty characters wide that buries the three
+# things you opened it for: what state it is in, how big it is, and what it
+# says.
+#
+# So each of these asks for the fields it wants and lays them out the same
+# way: the line you came for first, with nothing in front of it, then a label
+# column for everything that supports it. A preview command's output is drawn
+# as plain text - markdown is honoured only for a connector's preview - so
+# that column is the only hierarchy available.
+set -u
+
+kind="${1:-}"
+url="${2:-}"
+[ -n "$url" ] || { echo "usage: github-preview pr|checks|issue <url>" >&2; exit 1; }
+
+# How many lines of a body to show. Past this it is a document, not a preview,
+# and Enter is one keystroke away.
+readonly BODY_LINES="${LOOK_GH_BODY_LINES:-30}"
+
+# Shared jq: the label column, and a timestamp said the way a person says it.
+readonly HELPERS='
+def field($l; $v): $l + ("        "[0:(8 - ($l | length))]) + ($v | tostring);
+def ago: (now - (. | fromdateiso8601)) as $s |
+  if   $s <   3600 then "\(($s / 60)      | floor)m ago"
+  elif $s <  86400 then "\(($s / 3600)    | floor)h ago"
+  elif $s < 604800 then "\(($s / 86400)   | floor)d ago"
+  else                  "\(($s / 604800)  | floor)w ago" end;
+def body($n): (. // "") | gsub("\r"; "") | split("\n") |
+  (if length > $n then .[0:$n] + ["…"] else . end) | join("\n");
+'
+
+case "$kind" in
+    pr)
+        gh pr view "$url" --json \
+            state,isDraft,additions,deletions,changedFiles,author,baseRefName,headRefName,createdAt,reviewDecision,statusCheckRollup,comments,body \
+            --jq "$HELPERS"'
+            ([.statusCheckRollup[]? | (.conclusion // .state // "")] | map(ascii_downcase)) as $c |
+            [
+              ([(if .isDraft then "DRAFT" else .state end),
+                "+\(.additions) −\(.deletions)",
+                "\(.changedFiles) files",
+                (.createdAt | ago)] | join("  ·  ")),
+              "",
+              field("AUTHOR"; .author.login),
+              field("BRANCH"; "\(.headRefName) → \(.baseRefName)"),
+              (if ($c | length) > 0 then field("CHECKS";
+                 [(if ($c | map(select(. == "failure" or . == "error")) | length) > 0
+                   then "\($c | map(select(. == "failure" or . == "error")) | length) failing" else empty end),
+                  (if ($c | map(select(. == "success")) | length) > 0
+                   then "\($c | map(select(. == "success")) | length) passed" else empty end),
+                  (if ($c | map(select(. == "pending" or . == "in_progress" or . == "queued")) | length) > 0
+                   then "\($c | map(select(. == "pending" or . == "in_progress" or . == "queued")) | length) running" else empty end)]
+                 | join(" · ")) else empty end),
+              (if (.reviewDecision // "") != ""
+               then field("REVIEW"; .reviewDecision | ascii_downcase | gsub("_"; " ")) else empty end),
+              (if (.comments | length) > 0
+               then field("TALK"; "\(.comments | length) comment" +
+                                  (if (.comments | length) == 1 then "" else "s" end))
+               else empty end),
+              "",
+              (.body | body('"$BODY_LINES"'))
+            ] | join("\n")'
+        ;;
+
+    checks)
+        # Failing first, then still running, then the rest: the panel is read
+        # top-down and the first line should be the one that decides whether
+        # you can merge.
+        out="$(gh pr checks "$url" --json name,bucket,state,startedAt,completedAt \
+            --jq "$HELPERS"'
+            # Broken first, then still going, then what happened. A skipped
+            # check is the least interesting thing on a pull request, so it
+            # sorts last rather than above the ones that actually ran.
+            def order: {"fail": 0, "pending": 1, "cancel": 2, "pass": 3, "skipping": 4}[.bucket] // 9;
+            def mark: {"fail": "FAIL", "pending": "RUN", "skipping": "SKIP",
+                       "cancel": "STOP", "pass": "PASS"}[.bucket] // "?";
+            # A skipped check carries timestamps that run backwards, so a
+            # duration is only printed when it is one.
+            def took: if (.completedAt // "") == "" or (.startedAt // "") == "" then ""
+                      else ((.completedAt | fromdateiso8601) - (.startedAt | fromdateiso8601)) as $s |
+                           if   $s <= 0 then ""
+                           elif $s < 60 then "  \($s)s"
+                           else              "  \(($s / 60) | floor)m" end end;
+            # Counted in the order that matters rather than alphabetically:
+            # what is broken, then what is still going, then the rest.
+            (group_by(.bucket) | sort_by(.[0] | order)
+             | map("\(length) \(.[0].bucket)") | join("  ·  ")) as $summary |
+            [$summary, ""] + (sort_by(order, .name) | map(field(mark; .name + took)))
+            | join("\n")' 2>&1)" || true
+        # `gh pr checks` exits non-zero when something is failing, which is
+        # exactly when the output matters, so the exit code is not the test.
+        # Nothing printed means no checks are configured at all.
+        if [ -z "${out//[[:space:]]/}" ] || printf '%s' "$out" | grep -q "no checks reported"; then
+            echo "No checks on this pull request."
+        else
+            printf '%s\n' "$out"
+        fi
+        ;;
+
+    issue)
+        gh issue view "$url" --json \
+            state,author,createdAt,labels,comments,body \
+            --jq "$HELPERS"'
+            [
+              ([.state, (.createdAt | ago),
+                (if (.comments | length) > 0
+                 then "\(.comments | length) comment" +
+                      (if (.comments | length) == 1 then "" else "s" end)
+                 else empty end)]
+               | join("  ·  ")),
+              "",
+              field("AUTHOR"; .author.login),
+              (if (.labels | length) > 0
+               then field("LABELS"; [.labels[].name] | join(", ")) else empty end),
+              "",
+              (.body | body('"$BODY_LINES"'))
+            ] | join("\n")'
+        ;;
+
+    *)
+        echo "github-preview: no such kind \"$kind\" (pr, checks, issue)" >&2
+        exit 1
+        ;;
+esac
