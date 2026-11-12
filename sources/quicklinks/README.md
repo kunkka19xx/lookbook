@@ -18,8 +18,9 @@ you.
 
 **Requires.** Look v0.7.5 or newer, for `{arg}`. Nothing else.
 
-**Platforms.** macOS. Every line is `open "<url>"`, which on Linux is
-`xdg-open` and on Windows `start ""`; one `sed` does the lot, see Customise.
+**Platforms.** macOS and Linux. Every line runs `open` on macOS (checked first,
+so nothing changes there) and `xdg-open` on Linux. A last branch uses
+`start ""` for Windows, which is untested.
 
 ## Install
 
@@ -95,9 +96,8 @@ Two rules make the difference between one that works and one that nearly does:
 
 - **The browser** is whichever one the system opens a URL with. To pin one:
   `open -a 'Firefox' "<url>"`, or on Linux `firefox "<url>"`.
-- **Linux and Windows**: replace `open "` with `xdg-open "` (Linux) or
-  `start "" "` (Windows) throughout. The command is the only
-  platform-specific thing in the file, and it appears once per block.
+- **Windows**: the last `else` branch is `start "" "$u"`. It is untested; if it
+  does not work for you, that line is the only one to change in each block.
 - **Google, DuckDuckGo and a plain URL need no block.** Look already offers an
   **Open in browser** row for anything that looks like a URL, and `Cmd+Enter`
   on any query runs a web search with it.

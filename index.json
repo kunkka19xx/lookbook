@@ -228,14 +228,14 @@
       "id": "quicklinks",
       "name": "Quicklinks",
       "description": "Ten searches you can type into: GitHub, npm, MDN, Stack Overflow, Maps and more.",
-      "platforms": ["macos"],
+      "platforms": ["macos", "linux", "window"],
       "look": "0.7.5",
       "requires": [],
       "files": ["quicklinks.toml"],
       "bin": [],
       "readme": "sources/quicklinks/README.md",
       "path": "sources/quicklinks/",
-      "hash": "sha256:e626b7456f672fd2cb3bbc28bb7355de00acbdab44e7ad7ecf4ac66b97880d57"
+      "hash": "sha256:8d5a9db0ab3c37da93a05a467c29886d30c26688b127aeb3682c1c7685a3be59"
     },
     {
       "id": "shortcuts",

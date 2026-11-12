@@ -29,43 +29,70 @@
 # so the file is also the list of what it can reach: change a line and it goes
 # somewhere else.
 #
-# `open` is macOS. On Linux every line is `xdg-open`, on Windows `start ""`.
+# Every line opens the URL with `open` on macOS, `xdg-open` on Linux and
+# `start ""` on Windows. macOS is checked first, so it behaves exactly as before.
+# Linux is tested by name rather than left to a fallback because some distros
+# ship an unrelated `open` (openvt). Windows is the last branch and untested.
 
 [quicklinks-github]
 name    = "GitHub search"
 aliases = ["ghs"]
 icon    = "🐙"
-do      = ['''open "https://github.com/search?q={arg:url}&type=repositories"''']
+do      = ['''u="https://github.com/search?q={arg:url}&type=repositories"
+    if [ "$(uname)" = Darwin ]; then open "$u"
+    elif [ "$(uname)" = Linux ]; then xdg-open "$u"
+    else start "" "$u"
+    fi''']
 
 [quicklinks-npm]
 name    = "npm search"
 aliases = ["npms"]
 icon    = "📦"
-do      = ['''open "https://www.npmjs.com/search?q={arg:url}"''']
+do      = ['''u="https://www.npmjs.com/search?q={arg:url}"
+    if [ "$(uname)" = Darwin ]; then open "$u"
+    elif [ "$(uname)" = Linux ]; then xdg-open "$u"
+    else start "" "$u"
+    fi''']
 
 [quicklinks-mdn]
 name    = "MDN"
 aliases = ["mdn"]
 icon    = "🌐"
-do      = ['''open "https://developer.mozilla.org/en-US/search?q={arg:url}"''']
+do      = ['''u="https://developer.mozilla.org/en-US/search?q={arg:url}"
+    if [ "$(uname)" = Darwin ]; then open "$u"
+    elif [ "$(uname)" = Linux ]; then xdg-open "$u"
+    else start "" "$u"
+    fi''']
 
 [quicklinks-stackoverflow]
 name    = "Stack Overflow"
 aliases = ["sof"]
 icon    = "❓"
-do      = ['''open "https://stackoverflow.com/search?q={arg:url}"''']
+do      = ['''u="https://stackoverflow.com/search?q={arg:url}"
+    if [ "$(uname)" = Darwin ]; then open "$u"
+    elif [ "$(uname)" = Linux ]; then xdg-open "$u"
+    else start "" "$u"
+    fi''']
 
 [quicklinks-godoc]
 name    = "Go packages"
 aliases = ["godoc"]
 icon    = "🐹"
-do      = ['''open "https://pkg.go.dev/search?q={arg:url}"''']
+do      = ['''u="https://pkg.go.dev/search?q={arg:url}"
+    if [ "$(uname)" = Darwin ]; then open "$u"
+    elif [ "$(uname)" = Linux ]; then xdg-open "$u"
+    else start "" "$u"
+    fi''']
 
 [quicklinks-crates]
 name    = "crates.io"
 aliases = ["crates"]
 icon    = "🦀"
-do      = ['''open "https://crates.io/search?q={arg:url}"''']
+do      = ['''u="https://crates.io/search?q={arg:url}"
+    if [ "$(uname)" = Darwin ]; then open "$u"
+    elif [ "$(uname)" = Linux ]; then xdg-open "$u"
+    else start "" "$u"
+    fi''']
 
 [quicklinks-youtube]
 name    = "YouTube search"
@@ -73,7 +100,11 @@ aliases = ["yt"]
 icon    = "📺"
 # YouTube's parameter is `search_query`, not `q`: the short one silently
 # lands you on the home page.
-do      = ['''open "https://www.youtube.com/results?search_query={arg:url}"''']
+do      = ['''u="https://www.youtube.com/results?search_query={arg:url}"
+    if [ "$(uname)" = Darwin ]; then open "$u"
+    elif [ "$(uname)" = Linux ]; then xdg-open "$u"
+    else start "" "$u"
+    fi''']
 
 [quicklinks-maps]
 name    = "Google Maps"
@@ -81,16 +112,28 @@ aliases = ["maps"]
 icon    = "🗺"
 # The documented entry point for a search, rather than a /maps/search/<text>
 # path: `api=1` is Google's promise that this URL keeps working.
-do      = ['''open "https://www.google.com/maps/search/?api=1&query={arg:url}"''']
+do      = ['''u="https://www.google.com/maps/search/?api=1&query={arg:url}"
+    if [ "$(uname)" = Darwin ]; then open "$u"
+    elif [ "$(uname)" = Linux ]; then xdg-open "$u"
+    else start "" "$u"
+    fi''']
 
 [quicklinks-dockerhub]
 name    = "Docker Hub"
 aliases = ["dhub"]
 icon    = "🐳"
-do      = ['''open "https://hub.docker.com/search?q={arg:url}"''']
+do      = ['''u="https://hub.docker.com/search?q={arg:url}"
+    if [ "$(uname)" = Darwin ]; then open "$u"
+    elif [ "$(uname)" = Linux ]; then xdg-open "$u"
+    else start "" "$u"
+    fi''']
 
 [quicklinks-caniuse]
 name    = "Can I use"
 aliases = ["caniuse"]
 icon    = "✅"
-do      = ['''open "https://caniuse.com/?search={arg:url}"''']
+do      = ['''u="https://caniuse.com/?search={arg:url}"
+    if [ "$(uname)" = Darwin ]; then open "$u"
+    elif [ "$(uname)" = Linux ]; then xdg-open "$u"
+    else start "" "$u"
+    fi''']
