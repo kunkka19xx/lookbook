@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+# A connector: Look starts this once and leaves it running, and it pushes a row
+# per city every time the minute changes. No reload, which is the whole reason
+# `connect` exists where `run` would do otherwise - a clock made by a `run`
+# block would still read 09:50 an hour after you reloaded.
+#
+# Declared by ~/.look/sources/timezone-clock.toml.
+#
+# One loop does both jobs, as in the downloads-live example: `read -t` waits a
+# few seconds for a frame from Look, and when none comes it falls through and
+# checks the clock instead. One loop means one writer on stdout, so two frames
+# can never interleave.
+#
+# No timezone library and no Python: `TZ=Asia/Tokyo date` is the whole
+# calculation, it reads the same IANA database everything else does, and it
+# costs about six milliseconds. A resident bash connector is around a megabyte;
+# a resident Python one is ten to fifteen before it does anything.
+set -u
+
+readonly BLOCK="timezone-clock"
+
+# The cities, in the order you want to read them. Commas or spaces. Set on the
+# `connect` line in timezone-clock.toml, where it sits next to what it affects:
+# Look runs this through a LOGIN shell, which never reads ~/.zshrc.
+ZONES="${LOOK_CLOCK_ZONES:-America/Los_Angeles,America/New_York,Europe/London,Europe/Berlin,Asia/Kolkata,Asia/Singapore,Asia/Tokyo,Australia/Sydney}"
+
+# How often to look at the clock. Not how often it pushes: that happens when
+# the minute actually changes, which is once a minute however often this wakes.
+readonly EVERY="${LOOK_CLOCK_POLL:-5}"
+
+# Where the tzdb lives. macOS symlinks this to /var/db/timezone/zoneinfo, so
+# one path covers both systems.
+readonly TZDIR="/usr/share/zoneinfo"
+
+# Every frame is built by jq, never by string-pasting: a city called
+# `Argentina/Río_Gallegos` has to come out as valid JSON, and quoting that by
+# hand in shell is how a connector ends up sending a frame Look cannot read.
+say() { jq -cn "$@"; }
+
+# +0900 -> 540. `10#` because `09` is an octal literal to the shell, and
+# `10#09` is the one spelling that is not.
+offset_minutes() {
+    local raw="$1" total
+    total=$((10#${raw:1:2} * 60 + 10#${raw:3:2}))
+    [ "${raw:0:1}" = "-" ] && total=$((-total))
+    printf '%s' "$total"
+}
+
+# "8h ahead of you", the way a person says it: English puts "of" after "ahead"
+# and not after "behind".
+gap_phrase() {
+    local minutes="$1" hours rest amount
+    [ "$minutes" -eq 0 ] && { printf 'same time as you'; return; }
+    hours=$((${minutes#-} / 60))
+    rest=$((${minutes#-} % 60))
+    amount="${hours}h"
+    [ "$rest" -ne 0 ] && amount="$amount ${rest}m"
+    if [ "$minutes" -gt 0 ]; then
+        printf '%s ahead of you' "$amount"
+    else
+        printf '%s behind you' "$amount"
+    fi
+}
+
+# The zones that are really there, worked out once.
+#
+# A TZ the database does not have is NOT an error to `date`: it silently falls
+# back to UTC, so a typo would show a plausible wrong time forever. Checking
+# the file is the only way to tell.
+#
+# Done once rather than per push for two reasons. The list cannot change while
+# this runs, and an `error` frame per minute for one typo would fill Look's log
+# with the same line until the end of time. It also has to happen OUTSIDE the
+# command substitution that captures the rows, or the frame lands in the
+# captured text and corrupts the push it was meant to explain.
+KNOWN=""
+checked=0
+check_zones() {
+    [ "$checked" -eq 1 ] && return 0
+    checked=1
+    local zone
+    for zone in $(printf '%s' "$ZONES" | tr ',' ' '); do
+        if [ -f "$TZDIR/$zone" ]; then
+            KNOWN="$KNOWN $zone"
+        else
+            say --arg m "no timezone called \"$zone\"; skipping it" \
+                '{op:"error",message:$m}'
+        fi
+    done
+}
+
+rows_json() {
+    local here_offset zone stamp abbr offset delta rows=""
+    here_offset="$(offset_minutes "$(date +%z)")"
+
+    for zone in $KNOWN; do
+        stamp="$(TZ="$zone" date '+%H:%M')"
+        abbr="$(TZ="$zone" date '+%Z')"
+        offset="$(TZ="$zone" date '+%z')"
+        # A zone whose abbreviation the tzdb gives as a number (+08) reads as
+        # noise; the UTC form says the same thing and is what people paste.
+        case "$abbr" in
+            +* | -*) abbr="UTC${offset:0:3}:${offset:3:2}" ;;
+        esac
+        delta=$(( $(offset_minutes "$offset") - here_offset ))
+
+        # The city is the last segment of the zone name, underscores read as
+        # spaces. The id is the zone itself and never changes, which is what
+        # keeps the usage ranking a row earns from resetting every minute.
+        rows="$rows$(say \
+            --arg id "$zone" \
+            --arg title "$(printf '%s  ·  %s %s' "${zone##*/}" "$stamp" "$abbr" | tr '_' ' ')" \
+            --arg subtitle "$(printf '%s · %s · %s' \
+                "$(gap_phrase "$delta")" "$(TZ="$zone" date '+%a %d %b')" "$zone")" \
+            '{id:$id,title:$title,subtitle:$subtitle}')
+"
+    done
+
+    printf '%s' "$rows" | jq -cs .
+}
+
+push() {
+    local rows
+    rows="$(rows_json)" || return 0
+    # Never an empty frame. An empty `rows` is a real answer that clears the
+    # block, where a push that does not happen leaves the last good rows up -
+    # the distinction `run` blocks do not have to make.
+    [ "$rows" = "[]" ] && return 0
+    say --arg b "$BLOCK" --argjson rows "$rows" '{op:"rows",block:$b,rows:$rows}'
+}
+
+# Once a minute, not once per wakeup: every push makes Look re-read the
+# declared sources, and it rate-limits that but cannot make it free.
+pushed=""
+push_if_minute_changed() {
+    local now
+    check_zones
+    now="$(date '+%Y%m%d%H%M')"
+    [ "$now" = "$pushed" ] && return 0
+    pushed="$now"
+    push
+}
+
+field() { printf '%s' "$1" | jq -r "$2 // empty" 2>/dev/null; }
+
+while :; do
+    if IFS= read -r -t "$EVERY" line; then
+        case "$(field "$line" .op)" in
+            hello)
+                # No "preview" in the capabilities, and no preview frames
+                # handled below, because timezone-clock.toml declares a
+                # `preview` command - which overrides whatever a connector
+                # would answer, so Look never asks. Delete that line from the
+                # TOML and previews stop working rather than falling back here.
+                say '{op:"ready",capabilities:["rows"]}'
+                push_if_minute_changed
+                ;;
+            bye) exit 0 ;;
+            # An op this program does not know is ignored, never fatal. Look
+            # holds itself to the same rule in the other direction.
+            *) ;;
+        esac
+    elif [ "$?" -le 128 ]; then
+        # Not a timeout: stdin closed, so Look is gone and so are we.
+        exit 0
+    else
+        push_if_minute_changed
+    fi
+done

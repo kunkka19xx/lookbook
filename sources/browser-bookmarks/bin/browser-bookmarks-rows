@@ -1,0 +1,308 @@
+#!/usr/bin/env python3
+"""Browser bookmarks as Look rows: one JSON object per line.
+
+Declared by ~/.look/sources/browser-bookmarks.toml. Look runs this on reload
+(Cmd/Ctrl+Shift+;), never per keystroke, so the cost is paid once and typing
+filters the snapshot.
+
+Firefox and the Chromium browsers (Brave, Chrome, Chromium, Edge, Vivaldi),
+every profile of each, merged and de-duplicated by URL.
+
+Two stores, because the two families keep bookmarks in different shapes:
+Chromium writes one JSON file of nested folders, Firefox keeps them in
+places.sqlite beside its history. Python reads both without a second tool.
+"""
+
+import json
+import os
+import shutil
+import sqlite3
+import sys
+import tempfile
+
+# ----------------------------------------------------------------- settings --
+# Each can also be set as an environment variable. Look runs this through a
+# LOGIN shell, which does not read ~/.zshrc or ~/.bashrc, so the reliable place
+# is the `run` line in browser-bookmarks.toml, where it also sits next to what
+# it affects:
+#
+#   run = "LOOK_BOOKMARKS_BROWSERS=firefox ~/.look/bin/browser-bookmarks-rows"
+
+# Which browsers to read. "auto" is every browser below whose profile
+# directory exists. Otherwise a list: "firefox", "brave,chrome".
+BROWSERS = os.environ.get("LOOK_BOOKMARKS_BROWSERS", "auto")
+
+# How many rows at most. Look caps a block at 2,000 and warns when it has to.
+LIMIT = int(os.environ.get("LOOK_BOOKMARKS_LIMIT") or 1500)
+
+# Where browser-history caches one PNG per host. Read here, never written: a
+# bookmark row borrows the favicon that source already fetched, and falls back
+# to the block's own icon when it is not there.
+ICON_DIR = os.environ.get("LOOK_BOOKMARKS_ICONS") or os.path.expanduser(
+    "~/.look/cache/favicons"
+)
+
+# Two engines, and which one a browser uses is all that differs downstream.
+ENGINE = {
+    "firefox": "mozilla",
+    "brave": "chromium",
+    "chrome": "chromium",
+    "chromium": "chromium",
+    "edge": "chromium",
+    "vivaldi": "chromium",
+}
+
+HOME = os.path.expanduser("~")
+
+
+def bases_of(browser):
+    """Every directory a browser might keep profiles in, on this platform.
+
+    A browser that is not installed simply has no such directory, so listing
+    all of them costs nothing. Kept deliberately in step with
+    bin/browser-history-rows, which walks the same places.
+    """
+    if sys.platform == "darwin":
+        support = os.path.join(HOME, "Library", "Application Support")
+        return {
+            "firefox": [os.path.join(support, "Firefox", "Profiles")],
+            "brave": [os.path.join(support, "BraveSoftware", "Brave-Browser")],
+            "chrome": [os.path.join(support, "Google", "Chrome")],
+            "chromium": [os.path.join(support, "Chromium")],
+            "edge": [os.path.join(support, "Microsoft Edge")],
+            "vivaldi": [os.path.join(support, "Vivaldi")],
+        }[browser]
+
+    config = os.path.join(HOME, ".config")
+    flatpak = os.path.join(HOME, ".var", "app")
+    return {
+        "firefox": [
+            os.path.join(config, "mozilla", "firefox"),
+            os.path.join(HOME, ".mozilla", "firefox"),
+            os.path.join(HOME, "snap", "firefox", "common", ".mozilla", "firefox"),
+            os.path.join(flatpak, "org.mozilla.firefox", ".mozilla", "firefox"),
+        ],
+        "brave": [
+            os.path.join(config, "BraveSoftware", "Brave-Browser"),
+            os.path.join(flatpak, "com.brave.Browser", "config", "BraveSoftware", "Brave-Browser"),
+        ],
+        "chrome": [
+            os.path.join(config, "google-chrome"),
+            os.path.join(flatpak, "com.google.Chrome", "config", "google-chrome"),
+        ],
+        "chromium": [
+            os.path.join(config, "chromium"),
+            os.path.join(HOME, "snap", "chromium", "common", "chromium"),
+            os.path.join(flatpak, "org.chromium.Chromium", "config", "chromium"),
+        ],
+        "edge": [os.path.join(config, "microsoft-edge")],
+        "vivaldi": [os.path.join(config, "vivaldi")],
+    }[browser]
+
+
+def chromium_stores(browser):
+    """Every profile's Bookmarks file, as (profile name, path)."""
+    for base in bases_of(browser):
+        if not os.path.isdir(base):
+            continue
+        for profile in sorted(os.listdir(base)):
+            # Every Chromium install ships these two and neither holds a
+            # bookmark anybody made.
+            if profile in ("Guest Profile", "System Profile"):
+                continue
+            store = os.path.join(base, profile, "Bookmarks")
+            if os.path.isfile(store):
+                yield profile, store
+
+
+def mozilla_stores(browser):
+    """Every profile's places.sqlite, as (profile name, path)."""
+    for base in bases_of(browser):
+        if not os.path.isdir(base):
+            continue
+        for profile in sorted(os.listdir(base)):
+            store = os.path.join(base, profile, "places.sqlite")
+            if os.path.isfile(store):
+                yield profile, store
+
+
+def walk(node, out):
+    """Collect every url node under one Chromium bookmark folder.
+
+    The file is one tree of {"type": "folder", "children": [...]} and
+    {"type": "url", "url": ...}, and the folder names are not carried along:
+    what a bookmark is called is what you search for, and the folder it sits in
+    is a second word that would be the same on hundreds of rows.
+    """
+    for child in node.get("children") or ():
+        kind = child.get("type")
+        if kind == "url" and child.get("url"):
+            out.append((child["url"], child.get("name") or ""))
+        elif kind == "folder":
+            walk(child, out)
+
+
+def chromium_bookmarks(store):
+    try:
+        with open(store, encoding="utf-8") as handle:
+            roots = json.load(handle).get("roots") or {}
+    except (OSError, ValueError) as err:
+        print(f"browser-bookmarks-rows: {store}: {err}", file=sys.stderr)
+        return []
+
+    found = []
+    # Named rather than "every value in roots": that object also holds
+    # metadata keys (sync_transaction_version and friends) which are not
+    # folders at all.
+    for name in ("bookmark_bar", "other", "synced"):
+        root = roots.get(name)
+        if isinstance(root, dict):
+            walk(root, found)
+    return found
+
+
+def mozilla_bookmarks(store):
+    """Bookmarks from one places.sqlite.
+
+    A live browser holds a write lock and checkpoints lazily, so the file is
+    read from a copy taken WITH its -wal: no lock is taken, and this session's
+    bookmarks are not missing. No -shm, which SQLite rebuilds from the WAL.
+    """
+    tmp = tempfile.mkdtemp(prefix="look-bookmarks-")
+    try:
+        copy = os.path.join(tmp, "places.sqlite")
+        shutil.copyfile(store, copy)
+        if os.path.exists(store + "-wal"):
+            shutil.copyfile(store + "-wal", copy + "-wal")
+        with sqlite3.connect(copy) as conn:
+            # type = 1 is a bookmark; 2 is a folder and 3 a separator. A URL
+            # tagged in Firefox also appears under the tag folder, which the
+            # de-duplication below collapses back into one row.
+            return conn.execute(
+                "SELECT p.url, COALESCE(b.title, '') "
+                "FROM moz_bookmarks b JOIN moz_places p ON p.id = b.fk "
+                "WHERE b.type = 1 "
+                "ORDER BY b.lastModified DESC"
+            ).fetchall()
+    except (OSError, sqlite3.Error) as err:
+        print(f"browser-bookmarks-rows: {store}: {err}", file=sys.stderr)
+        return []
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def shown(url):
+    """The URL as a row shows it: no scheme, no query, no trailing slash.
+
+    What follows a '?' or a '#' in a bookmark is a tracking parameter or a
+    scroll anchor nine times in ten: thirty characters that read as noise and
+    push the part you recognise off the row. The full URL is in the preview.
+    """
+    rest = url.split("://", 1)[-1]
+    bare = rest.split("?", 1)[0].split("#", 1)[0].rstrip("/")
+    if len(bare) <= 60:
+        return bare
+    # The middle is what a long one loses: the host says which site, the tail
+    # says which page, so both ends have to survive.
+    return bare[:36] + "…" + bare[-20:]
+
+
+def icon_for(url):
+    """The cached favicon for this URL's host, if browser-history fetched one.
+
+    The filename convention is that source's, repeated here rather than
+    shared, because the two scripts install independently: host, port's colon
+    turned into an underscore, '.png'. An icon path that does not resolve is
+    drawn as its own text, so this returns None unless the file is really
+    there.
+    """
+    rest = url.split("://", 1)[-1]
+    host = rest.split("/", 1)[0].replace(":", "_")
+    if not host:
+        return None
+    path = os.path.join(ICON_DIR, host + ".png")
+    return path if os.path.isfile(path) else None
+
+
+known = list(ENGINE)
+if BROWSERS == "auto":
+    selected = known
+else:
+    selected = [b.strip() for b in BROWSERS.replace(",", " ").split() if b.strip()]
+    for browser in selected:
+        if browser not in ENGINE:
+            print(
+                f"LOOK_BOOKMARKS_BROWSERS: no browser called {browser!r} "
+                f"(known: {', '.join(known)})",
+                file=sys.stderr,
+            )
+
+# Collected per browser first, so a row can say which browser it came from
+# when more than one was read, and say nothing when only one was.
+per_browser = {}
+for browser in selected:
+    engine = ENGINE.get(browser)
+    if not engine:
+        continue
+    stores = chromium_stores(browser) if engine == "chromium" else mozilla_stores(browser)
+    found = []
+    for _profile, store in stores:
+        found += (
+            chromium_bookmarks(store) if engine == "chromium" else mozilla_bookmarks(store)
+        )
+    if found:
+        per_browser[browser] = found
+
+if not per_browser:
+    # Printing nothing keeps the rows from the last good run, which is why this
+    # says it on stderr and exits 0 rather than failing.
+    print("browser-bookmarks-rows: no browser bookmark store found", file=sys.stderr)
+    sys.exit(0)
+
+name_of = {
+    "firefox": "Firefox",
+    "brave": "Brave",
+    "chrome": "Chrome",
+    "chromium": "Chromium",
+    "edge": "Edge",
+    "vivaldi": "Vivaldi",
+}
+several = len(per_browser) > 1
+seen = set()
+written = 0
+
+try:
+    for browser, found in per_browser.items():
+        for url, title in found:
+            # http(s) only: a bookmarklet is javascript:, and a "place:" row is
+            # one of Firefox's own smart folders. Neither is a page Enter could
+            # hand to a browser.
+            if not url.startswith(("http://", "https://")):
+                continue
+            key = url.rstrip("/")
+            if key in seen:
+                continue
+            seen.add(key)
+
+            subtitle = shown(url)
+            if several:
+                subtitle += "  ·  " + name_of[browser]
+            row = {
+                "id": url,
+                "title": (title.strip() or shown(url))[:110],
+                "subtitle": subtitle,
+            }
+            icon = icon_for(url)
+            if icon:
+                row["icon"] = icon
+
+            print(json.dumps(row, ensure_ascii=False))
+            written += 1
+            if written >= LIMIT:
+                raise SystemExit(0)
+except BrokenPipeError:
+    # Look caps captured output at 256 KB and closes the pipe when it has
+    # enough. Python flushes stdout again on the way out, which would raise a
+    # second time, so stdout is pointed at /dev/null first.
+    os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+    sys.exit(0)

@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "Emoji"
+description = "Every emoji, searchable by name. Enter puts it on the clipboard."
+platforms   = ["macos"]
+look        = "0.7.5"
+requires    = ["python3"]

@@ -1,0 +1,36 @@
+# Every emoji, searchable by name, with Enter putting it on the clipboard.
+# Type "emo", then what you want: `emo rocket`, `emo like`, `emo coffee`.
+#
+# There is no emoji list in this folder and nothing is downloaded. The names
+# come from `unicodedata`, the Unicode Character Database that ships inside
+# Python itself, which is what everybody else's emoji list is generated from.
+# A newer Python knows newer emoji with nothing here to update.
+#
+# The work is in bin/emoji-rows: which blocks count as emoji, in what order,
+# and the short table of how people actually search for the famous ones -
+# Unicode calls 👍 "thumbs up sign" and nobody types "thumbs".
+
+[emoji]
+name    = "Emoji"
+aliases = ["emo"]
+icon    = "😀"
+
+# `format = "json"` is here for the per-row `icon`: each row's is the emoji
+# itself, so the list reads as the characters with their names beside them
+# rather than 1,800 identical glyphs. Tab-separated rows cannot carry one.
+format = "json"
+run    = "~/.look/bin/emoji-rows"
+
+# `scope = true` reserves "emo" as the FIRST word of a line, and this is the
+# block that most needs it: 1,800 rows called things like "heavy check mark"
+# would otherwise turn up in searches for ordinary words. Scoped, they are
+# invisible until you ask for them by name.
+scope = true
+
+# Enter copies the character, with no trailing newline: `printf %s`, never
+# `echo`. Look hides itself as it copies, so Cmd+V lands in whatever you were
+# typing in, and the clip is in Look's own clipboard history (c") afterwards.
+#
+# macOS as written. Linux: `wl-copy` on Wayland, `xclip -selection clipboard`
+# on X11. Windows: `clip`.
+open = "printf %s {id} | pbcopy"

@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "Snippets"
+description = "Text you retype, one file per snippet. Enter puts it on the clipboard."
+platforms   = ["macos"]
+look        = "0.7.5"
+requires    = []

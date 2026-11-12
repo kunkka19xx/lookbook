@@ -131,6 +131,14 @@ The **Platforms** column is what the author tested, not what might work. Where a
 | [images](sources/images) | oxipng, cwebp, ImageMagick | `applies` by `ext`, one block per tool that can actually act | Linux |
 | [obsidian](sources/obsidian) | Obsidian | `{arg}`: a block you type into; `{path:url}`; a `preview` that prints blocks | macOS |
 | [downloads-live](sources/downloads-live) | bash, jq | `connect`: a program that stays running and pushes rows, and fills the preview | macOS, Linux |
+| [vscode](sources/vscode)             | python3    | `run` + `format = "json"`: an editor's own recent list, rows that are real folders | macOS                 |
+| [github](sources/github)             | gh, jq     | four network lists in one file; `preview` as a CI check; shared `then` actions | macOS                 |
+| [quicklinks](sources/quicklinks)     | none       | `{arg}` and `{arg:url}`: ten blocks you type into, no tool at all | macOS                 |
+| [snippets](sources/snippets)         | none       | `dir` whose Enter copies instead of opening; `{arg}` writing a new file | macOS                 |
+| [devutils](sources/devutils)         | jq, python3 | `preview` showing the exact answer before Enter copies it | macOS                 |
+| [emoji](sources/emoji)               | python3    | 1,800 rows generated from Unicode itself; the clearest case for `scope` | macOS                 |
+| [browser-bookmarks](sources/browser-bookmarks) | python3 | two bookmark stores read as one list; favicons borrowed from another source's cache | macOS |
+| [timezone](sources/timezone)         | python3, jq | `{arg}` and `connect` in one folder: a converter you type into, a clock that stays current | macOS                 |
 <!-- /index:sources -->
 
 ## The tiles

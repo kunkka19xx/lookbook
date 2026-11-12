@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "Quicklinks"
+description = "Ten searches you can type into: GitHub, npm, MDN, Stack Overflow, Maps and more."
+platforms   = ["macos"]
+look        = "0.7.5"
+requires    = []

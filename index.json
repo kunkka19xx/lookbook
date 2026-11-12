@@ -30,6 +30,19 @@
       "hash": "sha256:bea1f75a46c0aea0152352688aca53ff73b7bc715ae0f6bb4376d0be765d3215"
     },
     {
+      "id": "browser-bookmarks",
+      "name": "Browser bookmarks",
+      "description": "Every bookmark from every browser profile, merged and de-duplicated, as rows.",
+      "platforms": ["macos"],
+      "look": "0.7.5",
+      "requires": ["python3"],
+      "files": ["browser-bookmarks.toml"],
+      "bin": ["browser-bookmarks-rows"],
+      "readme": "sources/browser-bookmarks/README.md",
+      "path": "sources/browser-bookmarks/",
+      "hash": "sha256:6f3e7404da404c2c1cfaf455e591a2e70b11a573e1f5ccb99327f1a3975037cd"
+    },
+    {
       "id": "browser-history",
       "name": "Browser history",
       "description": "Your browser history as rows, most recent first, each with the site's favicon.",
@@ -69,6 +82,19 @@
       "hash": "sha256:276e09de6e0baeb8befbc353396a6a7fc26b7a14570748622cd5554fc40fa5c8"
     },
     {
+      "id": "devutils",
+      "name": "Dev utils",
+      "description": "UUIDs, passwords, base64, SHA-256, URL encoding, epoch times and JSON, onto the clipboard.",
+      "platforms": ["macos"],
+      "look": "0.7.5",
+      "requires": [],
+      "files": ["devutils.toml"],
+      "bin": ["devutils"],
+      "readme": "sources/devutils/README.md",
+      "path": "sources/devutils/",
+      "hash": "sha256:34694e359824edfb26de90ff128202b850b72acaa77096218acd6d9f903ca909"
+    },
+    {
       "id": "docker",
       "name": "Docker containers",
       "description": "Every container as a row, with status, logs in the preview, and a shell on Enter.",
@@ -95,6 +121,19 @@
       "hash": "sha256:0876680c1f5e355eac411045146744d20d81cfd661b281ed0852faad6bd83abe"
     },
     {
+      "id": "emoji",
+      "name": "Emoji",
+      "description": "Every emoji, searchable by name. Enter puts it on the clipboard.",
+      "platforms": ["macos"],
+      "look": "0.7.5",
+      "requires": ["python3"],
+      "files": ["emoji.toml"],
+      "bin": ["emoji-rows"],
+      "readme": "sources/emoji/README.md",
+      "path": "sources/emoji/",
+      "hash": "sha256:a4994cc72a52087d09f52f67de578e22646b69b0f69373e4e2ce2a4c45459de4"
+    },
+    {
       "id": "git",
       "name": "Git branches and worktrees",
       "description": "Branches and worktrees of whichever project you have selected.",
@@ -106,6 +145,19 @@
       "readme": "sources/git/README.md",
       "path": "sources/git/",
       "hash": "sha256:9cbe0ebde0d1fbb7145f2c83e1f56b92fa09f4c9daf545b6dd1e43433ed0f15b"
+    },
+    {
+      "id": "github",
+      "name": "GitHub",
+      "description": "Reviews waiting on you, your open PRs, your issues and your notifications, as rows.",
+      "platforms": ["macos"],
+      "look": "0.7.5",
+      "requires": ["gh", "jq", "bash"],
+      "files": ["github.toml"],
+      "bin": ["github-preview"],
+      "readme": "sources/github/README.md",
+      "path": "sources/github/",
+      "hash": "sha256:b18cf6aa595773854d7d2a22b401a114975abbd42a219804a1be29999ac1205a"
     },
     {
       "id": "homebrew",
@@ -173,6 +225,19 @@
       "hash": "sha256:f88db9b8e0a94cf65fc5d4a790665c379727d36c22b57c3608bc8fd6997a7230"
     },
     {
+      "id": "quicklinks",
+      "name": "Quicklinks",
+      "description": "Ten searches you can type into: GitHub, npm, MDN, Stack Overflow, Maps and more.",
+      "platforms": ["macos"],
+      "look": "0.7.5",
+      "requires": [],
+      "files": ["quicklinks.toml"],
+      "bin": [],
+      "readme": "sources/quicklinks/README.md",
+      "path": "sources/quicklinks/",
+      "hash": "sha256:e626b7456f672fd2cb3bbc28bb7355de00acbdab44e7ad7ecf4ac66b97880d57"
+    },
+    {
       "id": "shortcuts",
       "name": "Shortcuts",
       "description": "Every shortcut from the Shortcuts app, as rows.",
@@ -184,6 +249,19 @@
       "readme": "sources/shortcuts/README.md",
       "path": "sources/shortcuts/",
       "hash": "sha256:8bc66581dd7d3138d52c5658d873eeb932dc23113dbb4e0e0fad43fd824b2827"
+    },
+    {
+      "id": "snippets",
+      "name": "Snippets",
+      "description": "Text you retype, one file per snippet. Enter puts it on the clipboard.",
+      "platforms": ["macos"],
+      "look": "0.7.5",
+      "requires": [],
+      "files": ["snippets.toml"],
+      "bin": [],
+      "readme": "sources/snippets/README.md",
+      "path": "sources/snippets/",
+      "hash": "sha256:20b66952047b407aa881c3de035ea4c2d6b7787267a86e52ac03ac3332fa15e7"
     },
     {
       "id": "ssh",
@@ -212,6 +290,19 @@
       "hash": "sha256:3158f5b8e403e14cfcd70a2726931e4fdb4692f8e70f94d47c41016954f0cfce"
     },
     {
+      "id": "timezone",
+      "name": "Timezone",
+      "description": "Timezone lookup and conversion from one typed line, offline, plus a live world clock.",
+      "platforms": ["macos"],
+      "look": "0.7.5",
+      "requires": ["python3"],
+      "files": ["timezone-clock.toml", "timezone.toml"],
+      "bin": ["timezone", "timezone-clock"],
+      "readme": "sources/timezone/README.md",
+      "path": "sources/timezone/",
+      "hash": "sha256:99e537e5a5779b1ae3c30967f2a08cd32e0121ec3d6d81a13d59f3b79852d2fe"
+    },
+    {
       "id": "tmux",
       "name": "tmux sessions",
       "description": "One session per project, opened in the terminal you are already in.",
@@ -223,6 +314,19 @@
       "readme": "sources/tmux/README.md",
       "path": "sources/tmux/",
       "hash": "sha256:c64899ab74c7da32486e5e8d359afb80c0b15b19097938dc9b19c889efce41f1"
+    },
+    {
+      "id": "vscode",
+      "name": "VS Code projects",
+      "description": "Every project you have opened in VS Code lately, as a row. Enter reopens it.",
+      "platforms": ["macos"],
+      "look": "0.7.5",
+      "requires": ["python3"],
+      "files": ["vscode.toml"],
+      "bin": ["vscode-recents"],
+      "readme": "sources/vscode/README.md",
+      "path": "sources/vscode/",
+      "hash": "sha256:3136688289719a857422024aab4b42662fe04c1fd64e9076c543c4dc8a297f9c"
     },
     {
       "id": "work-setup",

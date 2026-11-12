@@ -1,0 +1,156 @@
+#!/bin/sh
+# One small transform per call, printed to stdout. Declared by
+# ~/.look/sources/devutils.toml.
+#
+#   devutils b64 "hello world"      ->  aGVsbG8gd29ybGQ=
+#   devutils epoch 1762900000       ->  2025-11-12 07:26:40 JST
+#   devutils uuid | devutils copy       puts a fresh UUID on the clipboard
+#
+# WHY A SCRIPT, when every one of these is a one-liner. Each block in the
+# .toml declares the same command twice: once as `preview`, so you can read
+# the answer, and once as `do`, which copies it. Written inline that is
+# eighteen commands that have to agree, and the day one of them does not, the
+# panel shows you one answer and Enter copies another. Here each transform
+# exists once, and the only difference between seeing it and keeping it is
+# `| devutils copy`.
+#
+# It also puts everything platform-specific in one place: `copy`, `paste` and
+# the two `date` dialects, below. Porting this source is reading one function,
+# not ten `pbcopy`s.
+#
+# EXTENDING IT is one arm of the case statement plus a five-line block in the
+# .toml. The contract an arm has to keep:
+#
+#   - print the answer, and nothing else, to stdout
+#   - print NO trailing newline, because the answer is going on a clipboard
+#     and `echo` is how a hash or a base64 quietly gains a byte
+#   - say what went wrong on stderr and exit non-zero, so the preview pane
+#     shows the reason rather than going blank
+set -u
+
+op=${1:-}
+[ $# -gt 0 ] && shift
+arg=${1:-}
+
+die() {
+    echo "devutils: $*" >&2
+    exit 1
+}
+
+# --------------------------------------------------------------- clipboard --
+# Every platform's spelling, in one place. The order matters on Linux: a
+# Wayland session usually also answers to xclip through Xwayland, and wl-copy
+# is the one that reaches native clients.
+copy() {
+    if command -v pbcopy >/dev/null 2>&1; then pbcopy
+    elif command -v wl-copy >/dev/null 2>&1; then wl-copy
+    elif command -v xclip >/dev/null 2>&1; then xclip -selection clipboard
+    elif command -v xsel >/dev/null 2>&1; then xsel --clipboard --input
+    elif command -v clip.exe >/dev/null 2>&1; then clip.exe
+    else die "no clipboard tool found (pbcopy, wl-copy, xclip, xsel, clip.exe)"
+    fi
+}
+
+paste() {
+    if command -v pbpaste >/dev/null 2>&1; then pbpaste
+    elif command -v wl-paste >/dev/null 2>&1; then wl-paste --no-newline
+    elif command -v xclip >/dev/null 2>&1; then xclip -selection clipboard -o
+    elif command -v xsel >/dev/null 2>&1; then xsel --clipboard --output
+    elif command -v powershell.exe >/dev/null 2>&1; then powershell.exe -NoProfile -Command Get-Clipboard
+    else die "no clipboard tool found (pbpaste, wl-paste, xclip, xsel, powershell.exe)"
+    fi
+}
+
+# ------------------------------------------------------------------- tools --
+# `shasum` is the macOS spelling and `sha256sum` the GNU one; most Linux boxes
+# have both, macOS has only the first.
+sha256_of() {
+    if command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 | cut -d' ' -f1 | tr -d '\n'
+    elif command -v sha256sum >/dev/null 2>&1; then
+        sha256sum | cut -d' ' -f1 | tr -d '\n'
+    else
+        die "neither shasum nor sha256sum is installed"
+    fi
+}
+
+# BSD `date` takes -r for "this is an epoch", GNU `date` takes -d @. Tried in
+# that order rather than branching on `uname`, because a macOS with GNU
+# coreutils on its PATH is a real machine people have.
+date_at() {
+    date -r "$1" "+$2" 2>/dev/null ||
+        date -d "@$1" "+$2" 2>/dev/null ||
+        die "this date understands neither -r nor -d @ (epoch $1)"
+}
+
+# ---------------------------------------------------------------------- ops --
+case "$op" in
+    copy)  copy ;;
+    paste) paste ;;
+
+    # The two that cannot be previewed exactly: the answer does not exist
+    # until this runs. The .toml says so in the panel rather than showing a
+    # different value from the one Enter copies.
+    uuid)
+        command -v uuidgen >/dev/null 2>&1 || die "uuidgen is not installed"
+        uuidgen | tr -d '\n'
+        ;;
+    genpw)
+        n=$arg
+        case $n in '' | *[!0-9]*) n=24 ;; esac
+        [ "$n" -gt 0 ] 2>/dev/null || n=24
+        # /dev/urandom rather than openssl: one less thing to have installed.
+        # LC_ALL=C because `tr` with a ranged set is locale-dependent, and a
+        # UTF-8 locale makes it reject bytes instead of filtering them.
+        # Alphanumeric on purpose: the first site that rejects a "+" costs
+        # more than the two bits per character it gives up.
+        LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c "$n"
+        ;;
+
+    # `printf %s`, never `echo`: the base64 or the hash of your text plus a
+    # newline is not the base64 or the hash of your text.
+    b64)    printf %s "$arg" | base64 | tr -d '\n' ;;
+    b64d)   printf %s "$arg" | base64 --decode ;;
+    sha256) printf %s "$arg" | sha256_of ;;
+
+    # Encoding needs no tool at all - `{arg:url}` in the .toml is Look's own
+    # percent-encoding - so only this direction is here.
+    urldec)
+        command -v python3 >/dev/null 2>&1 || die "python3 is not installed (urldec needs it)"
+        python3 -c "import sys,urllib.parse as u; print(u.unquote(sys.argv[1]), end='')" "$arg"
+        ;;
+
+    # Both directions, because the question is the same one. No argument is
+    # "what is the time now, as a number"; a number is "what time is that".
+    # Eleven digits or more is milliseconds, which is what a log line holds.
+    epoch)
+        case $arg in
+            '')
+                date +%s | tr -d '\n'
+                ;;
+            *[!0-9]*)
+                die "epoch takes a whole number of seconds or milliseconds, not \"$arg\""
+                ;;
+            ???????????*)
+                date_at "$((arg / 1000))" '%Y-%m-%d %H:%M:%S %Z' | tr -d '\n'
+                ;;
+            *)
+                date_at "$arg" '%Y-%m-%d %H:%M:%S %Z' | tr -d '\n'
+                ;;
+        esac
+        ;;
+
+    # The clipboard rather than an argument: JSON you want indented came out
+    # of a log or a response body, never off your own keyboard.
+    json)
+        command -v jq >/dev/null 2>&1 || die "jq is not installed (jsonfmt needs it)"
+        paste | jq .
+        ;;
+
+    '')
+        die "usage: devutils <uuid|genpw|b64|b64d|sha256|urldec|epoch|json|copy|paste> [value]"
+        ;;
+    *)
+        die "no such transform: \"$op\""
+        ;;
+esac

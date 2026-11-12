@@ -1,0 +1,51 @@
+# Your browser bookmarks, searchable in Look. Type "marks".
+#
+# Firefox and the Chromium browsers (Brave, Chrome, Chromium, Edge, Vivaldi),
+# every profile of each, merged and de-duplicated by URL. The sibling of the
+# browser-history source, and the two are worth having together: history is
+# where you have been, bookmarks are what you decided to keep.
+#
+# The work is in bin/browser-bookmarks-rows, because the two families keep
+# bookmarks in different shapes - Chromium writes one JSON file of nested
+# folders, Firefox keeps them in places.sqlite - and reading both is worth
+# being able to read and edit.
+
+[browser-bookmarks]
+name    = "Browser bookmarks"
+icon    = "🔖"
+format  = "json"
+
+# One alias, not three. Each single-word alias becomes a reserved scope opener
+# (see `scope` below), so they are spent carefully: "bookmarks" and "browser"
+# are deliberately not among them, the first because the hand-kept
+# bookmarks source answers to it and the second because browser-history does.
+aliases = ["marks"]
+
+# `scope = true` reserves "marks" as the FIRST word of a line: `marks jira`
+# lists only these rows, matching "jira" inside them. Without it, a search for
+# "jira" also has your files, your apps and your history in it.
+scope = true
+
+# Every browser whose profiles exist. Narrow it to one if you keep bookmarks in
+# a browser you do not want in the launcher:
+#   run = "LOOK_BOOKMARKS_BROWSERS=firefox ~/.look/bin/browser-bookmarks-rows"
+#
+# Set here rather than exported from your shell rc, because Look runs commands
+# through a LOGIN shell, which never reads ~/.zshrc or ~/.bashrc.
+run = "~/.look/bin/browser-bookmarks-rows"
+
+# Reading a few JSON files and copying one SQLite database per Firefox profile.
+# Generous because the copy is what varies: a large places.sqlite on a cold
+# disk is the slow case, not the parsing.
+timeout = "20s"
+
+# The row id is the URL, so Enter hands it to your default browser. Both
+# spellings, because the script reads profiles on either platform and only one
+# of these commands exists on any given machine: xdg-open is Linux, open is
+# macOS. On Windows this is `start "" {id}` and neither branch applies.
+open = "command -v xdg-open >/dev/null 2>&1 && xdg-open {id} || open {id}"
+
+# The full URL, which the row deliberately truncates: the subtitle drops the
+# scheme, the query string and the fragment, and this is where you check what
+# Enter actually opens before you press it.
+preview = "printf '%s\\n' {id}"

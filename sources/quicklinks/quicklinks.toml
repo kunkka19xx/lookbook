@@ -1,0 +1,96 @@
+# The ten search boxes you otherwise reach by opening a tab first. Type the
+# block's word, then what you are looking for:
+#
+#   ghs       ripgrep             GitHub repositories
+#   npms      zustand             the npm registry
+#   mdn       structuredClone     MDN
+#   sof       rust lifetime       Stack Overflow
+#   godoc     cobra               pkg.go.dev
+#   crates    serde_json          crates.io
+#   yt        wgpu talk           YouTube
+#   maps      shibuya station     Google Maps
+#   dhub      postgres            Docker Hub
+#   caniuse   subgrid             caniuse.com
+#
+# `{arg}` is the rest of the line after that word, which is what keeps these
+# rows findable by typing rather than only through Cmd+K: a `do` block naming
+# any OTHER placeholder would be a then-target, because it would only mean
+# something against a selected row.
+#
+# `{arg:url}` is the same value percent-encoded. It has to be, twice over: a
+# space in `rust lifetime` is %20 rather than a second word, and a `&` or a `+`
+# in what you typed would otherwise end the query string early and search for
+# half of it. That is also why each URL is wrapped in quotes - `?` and `&` are
+# shell punctuation - and why the quotes are safe: `:url` is the one
+# substitution Look does not shell-escape, because what comes out of it is only
+# A-Za-z0-9-._~%, which no shell reads as punctuation.
+#
+# Nothing here is installed, configured or signed in to. Each block is one URL,
+# so the file is also the list of what it can reach: change a line and it goes
+# somewhere else.
+#
+# `open` is macOS. On Linux every line is `xdg-open`, on Windows `start ""`.
+
+[quicklinks-github]
+name    = "GitHub search"
+aliases = ["ghs"]
+icon    = "🐙"
+do      = ['''open "https://github.com/search?q={arg:url}&type=repositories"''']
+
+[quicklinks-npm]
+name    = "npm search"
+aliases = ["npms"]
+icon    = "📦"
+do      = ['''open "https://www.npmjs.com/search?q={arg:url}"''']
+
+[quicklinks-mdn]
+name    = "MDN"
+aliases = ["mdn"]
+icon    = "🌐"
+do      = ['''open "https://developer.mozilla.org/en-US/search?q={arg:url}"''']
+
+[quicklinks-stackoverflow]
+name    = "Stack Overflow"
+aliases = ["sof"]
+icon    = "❓"
+do      = ['''open "https://stackoverflow.com/search?q={arg:url}"''']
+
+[quicklinks-godoc]
+name    = "Go packages"
+aliases = ["godoc"]
+icon    = "🐹"
+do      = ['''open "https://pkg.go.dev/search?q={arg:url}"''']
+
+[quicklinks-crates]
+name    = "crates.io"
+aliases = ["crates"]
+icon    = "🦀"
+do      = ['''open "https://crates.io/search?q={arg:url}"''']
+
+[quicklinks-youtube]
+name    = "YouTube search"
+aliases = ["yt"]
+icon    = "📺"
+# YouTube's parameter is `search_query`, not `q`: the short one silently
+# lands you on the home page.
+do      = ['''open "https://www.youtube.com/results?search_query={arg:url}"''']
+
+[quicklinks-maps]
+name    = "Google Maps"
+aliases = ["maps"]
+icon    = "🗺"
+# The documented entry point for a search, rather than a /maps/search/<text>
+# path: `api=1` is Google's promise that this URL keeps working.
+do      = ['''open "https://www.google.com/maps/search/?api=1&query={arg:url}"''']
+
+[quicklinks-dockerhub]
+name    = "Docker Hub"
+aliases = ["dhub"]
+icon    = "🐳"
+do      = ['''open "https://hub.docker.com/search?q={arg:url}"''']
+
+[quicklinks-caniuse]
+name    = "Can I use"
+aliases = ["caniuse"]
+icon    = "✅"
+do      = ['''open "https://caniuse.com/?search={arg:url}"''']

@@ -1,0 +1,7 @@
+# What the catalog shows before you install this. `make index` reads it.
+
+name        = "Dev utils"
+description = "UUIDs, passwords, base64, SHA-256, URL encoding, epoch times and JSON, onto the clipboard."
+platforms   = ["macos"]
+look        = "0.7.5"
+requires    = []

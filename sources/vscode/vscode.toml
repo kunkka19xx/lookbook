@@ -1,0 +1,55 @@
+# Every project you have opened in VS Code lately, as a row. Type "vsc".
+#
+# The list is the editor's own: it lives in `state.vscdb`, a SQLite file each
+# editor in the family keeps for itself, so this works with every window
+# closed and never talks to a running editor.
+#
+# The work is in bin/vscode-recents. It is Python for one reason: the entries
+# are `file://` URIs, and turning one back into a path means percent-decoding,
+# which jq cannot do and a sed that tries gets wrong on the first project with
+# a space in its name.
+
+[vscode]
+name    = "VS Code projects"
+aliases = ["vsc"]
+icon    = "💻"
+format  = "json"
+
+# Code, Code - Insiders, VSCodium, Cursor and Windsurf, whichever are there,
+# merged newest first. Narrow it to one when you have several installed and
+# only want that one's list:
+#   run = "LOOK_VSCODE_FLAVORS=Cursor ~/.look/bin/vscode-recents"
+#
+# Set here rather than exported from your shell rc, because Look runs commands
+# through a LOGIN shell, which never reads ~/.zshrc or ~/.bashrc.
+run = "~/.look/bin/vscode-recents"
+
+# Generous for reading one 300 KB file, and the reason is the number of them:
+# a machine with four editors installed is four snapshots and four queries,
+# on a disk that may be spinning up.
+timeout = "10s"
+
+# `scope = true` reserves "vsc" as the FIRST word of a line, so `vsc api`
+# lists only these rows, matching "api" inside them. Without it you also get
+# every file and folder on the machine with "api" in its name.
+scope = true
+
+# Every row carries a `path`, so Cmd+E, Cmd+T, Cmd+F and the preview pane all
+# work on it as they would on any folder Look found itself. Only Enter is
+# declared, because the whole point of the row is the editor it came from.
+#
+# `open -a` takes the app's name as it appears in /Applications, so it needs no
+# `code` on your PATH (VS Code does not install one until you ask it to).
+open = "open -a 'Visual Studio Code' {path}"
+
+# Asked by the installer, because the editor that made this list is not
+# necessarily the one you want Enter to use: a Cursor user reading Cursor's own
+# recents wants Cursor here.
+[[setup]]
+label   = "Editor for Enter"
+type    = "choice"
+block   = "vscode"
+key     = "open"
+match   = "Visual Studio Code"
+options = ["Visual Studio Code", "Code - Insiders", "VSCodium", "Cursor", "Windsurf"]
+note    = "The app name as it appears in /Applications."
