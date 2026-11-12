@@ -13,9 +13,11 @@ password, and if `gh auth status` works in a terminal these work too.
 **Requires.** Look v0.7.5 or newer (for `scope`), [`gh`](https://cli.github.com)
 signed in (`gh auth login`), `jq`, and `bash` for the preview script.
 
-**Platforms.** macOS, where it was used. The `open` lines try `xdg-open`
-first, so Linux should work untested; `pbcopy` in `github-copy-link` is the one
-macOS-only line left. On Windows both need the spellings in Customise.
+**Platforms.** macOS, where it was written, and Linux (tested on sway with
+`wl-copy`). The `open` lines try `xdg-open` first, and `github-copy-link` and
+`github-open-repo` pick `pbcopy`/`open` on macOS and `wl-copy`/`xclip`/`xdg-open`
+elsewhere. Untested on Windows, where the commands need the spellings in
+Customise.
 
 ## Install
 
@@ -104,10 +106,12 @@ terminal will tell you about.
 
 ## Customise
 
-- **`pbcopy` in `github-copy-link`** is macOS. Linux: `wl-copy` on Wayland,
-  `xclip -selection clipboard` on X11. Windows: `clip`.
-- **The `open` lines** already try `xdg-open` then `open`. On Windows both
-  branches miss, so replace them with `start "" {id}`.
+- **The clipboard in `github-copy-link`** is `pbcopy` on macOS, `wl-copy` on
+  Linux when it is installed and `xclip -selection clipboard` otherwise.
+  Windows: `clip`.
+- **The `open` lines** already try `xdg-open` then `open`, and `github-open-repo`
+  uses `open` on macOS and `xdg-open` elsewhere. On Windows these miss, so
+  replace them with `start "" {id}`.
 - **A specific browser** rather than your default: `open -a 'Firefox' {id}`.
 - **A narrower review list.** `--review-requested=@me` includes every org you
   belong to. Add a repo filter to cut it down: `--repo owner/name`, repeatable,

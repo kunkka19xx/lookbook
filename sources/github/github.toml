@@ -122,12 +122,16 @@ then = ["github-copy-link", "github-open-repo"]
 
 # Reached with Cmd+K from any of the four. These rows carry no path, so Look's
 # own Cmd+C has nothing to copy from them, which is what makes this worth
-# declaring. The one macOS-only line in the file: on Linux `pbcopy` is
-# `wl-copy`, or `xclip -selection clipboard`.
+# declaring. macOS is checked first and keeps `pbcopy`; Linux uses `wl-copy`
+# when it is installed and `xclip -selection clipboard` otherwise.
 [github-copy-link]
 name = "Copy link"
 icon = "🔗"
-do   = ["printf %s {id} | pbcopy"]
+do   = ['''u={id}
+    if [ "$(uname)" = Darwin ]; then printf %s "$u" | pbcopy
+    elif command -v wl-copy >/dev/null 2>&1; then printf %s "$u" | wl-copy
+    else printf %s "$u" | xclip -selection clipboard
+    fi''']
 
 
 # The repository the row belongs to, which is two path segments up from any of
@@ -135,4 +139,7 @@ do   = ["printf %s {id} | pbcopy"]
 [github-open-repo]
 name = "Open repository"
 icon = "📦"
-do   = ['''open "$(printf %s {id} | sed -e 's#/pull/.*##' -e 's#/issues/.*##')"''']
+do   = ['''u=$(printf %s {id} | sed -e 's#/pull/.*##' -e 's#/issues/.*##')
+    if [ "$(uname)" = Darwin ]; then open "$u"
+    else xdg-open "$u"
+    fi''']
