@@ -69,6 +69,19 @@
       "hash": "sha256:6d12a646403ed86eeb96a013072147309f99724d5d3ed661e8276fbfe882334b"
     },
     {
+      "id": "convert",
+      "name": "Convert units",
+      "description": "Unit conversion from one typed line, offline, with your own units in a file you keep.",
+      "platforms": ["macos"],
+      "look": "0.7.5",
+      "requires": ["python3"],
+      "files": ["convert.toml"],
+      "bin": ["convert"],
+      "readme": "sources/convert/README.md",
+      "path": "sources/convert/",
+      "hash": "sha256:e664341fb7fbdf27ed889cee06806b91198d6b605c557f63a7ad3b8b49f3a752"
+    },
+    {
       "id": "dev-projects",
       "name": "Dev projects",
       "description": "Every folder in ~/dev as a row.",
@@ -85,7 +98,7 @@
       "id": "devutils",
       "name": "Dev utils",
       "description": "UUIDs, passwords, base64, SHA-256, URL encoding, epoch times and JSON, onto the clipboard.",
-      "platforms": ["macos"],
+      "platforms": ["macos", "linux"],
       "look": "0.7.5",
       "requires": [],
       "files": ["devutils.toml"],
@@ -150,14 +163,14 @@
       "id": "github",
       "name": "GitHub",
       "description": "Reviews waiting on you, your open PRs, your issues and your notifications, as rows.",
-      "platforms": ["macos"],
+      "platforms": ["macos", "linux"],
       "look": "0.7.5",
       "requires": ["gh", "jq", "bash"],
       "files": ["github.toml"],
       "bin": ["github-preview"],
       "readme": "sources/github/README.md",
       "path": "sources/github/",
-      "hash": "sha256:b18cf6aa595773854d7d2a22b401a114975abbd42a219804a1be29999ac1205a"
+      "hash": "sha256:8794233baae3fb500f72e010bf1a4d7f2e0dd31cec0a63ea6b5e7d1fb6b8c919"
     },
     {
       "id": "homebrew",
