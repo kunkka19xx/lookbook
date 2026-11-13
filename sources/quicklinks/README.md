@@ -18,10 +18,9 @@ you.
 
 **Requires.** Look v0.7.5 or newer, for `{arg}`. Nothing else.
 
-**Platforms.** macOS and Linux use `quicklinks.toml`. Windows uses
-`windows/quicklinks.toml`, because Look runs commands through `cmd` there and
-cmd cannot read the shell syntax of the main file. The Windows file is a plain
-`start ""` per block, and is untested beyond that.
+**Platforms.** macOS, Linux and Windows, from the same file. Look runs a
+command through `sh` on the first two and `cmd` on Windows, so each block is
+one line both can read; the comment at the top of the file takes it apart.
 
 ## Install
 
@@ -29,10 +28,10 @@ cmd cannot read the shell syntax of the main file. The Windows file is a plain
 cp sources/quicklinks/*.toml ~/.look/sources/
 ```
 
-On Windows (PowerShell), copy the Windows file instead:
+On Windows (PowerShell):
 
 ```powershell
-copy sources\quicklinks\windows\quicklinks.toml $env:USERPROFILE\.look\sources\
+copy sources\quicklinks\quicklinks.toml $env:USERPROFILE\.look\sources\
 ```
 
 Reload with `Cmd+Shift+;` (macOS) or `Ctrl+Shift+;` (Linux, Windows).
@@ -86,8 +85,14 @@ search for something, and look at the address bar:
 name    = "Jira"
 aliases = ["jira"]
 icon    = "🎟"
-do      = ['''open "https://your-company.atlassian.net/issues/?jql=text~{arg:url}"''']
+do      = ["""set "url=https://your-company.atlassian.net/issues/?jql=text~{arg:url}" \
+           && call start "" "%url%" \
+           || case ${OSTYPE:-$(uname)} in [Dd]arwin*) exec open "${1#url=}" ;; *) exec xdg-open "${1#url=}" ;; esac"""]
 ```
+
+Copy any block and change only the URL in the first line; the other two are
+the same in every block. Keep the triple `"""` and the trailing `\`: they are
+what turns the three lines back into the one line `cmd` reads.
 
 Two rules make the difference between one that works and one that nearly does:
 
@@ -101,10 +106,11 @@ Two rules make the difference between one that works and one that nearly does:
 
 ## Customise
 
-- **The browser** is whichever one the system opens a URL with. To pin one:
-  `open -a 'Firefox' "<url>"`, or on Linux `firefox "<url>"`.
-- **Windows**: the last `else` branch is `start "" "$u"`. It is untested; if it
-  does not work for you, that line is the only one to change in each block.
+- **The browser** is whichever one the system opens a URL with. To pin one,
+  change the opener on your platform: `open -a 'Firefox'` on macOS,
+  `firefox` in place of `xdg-open` on Linux, `start "" firefox` on Windows.
+- **Only one platform?** Each block can shrink to its own opener:
+  `open "<url>"`, `xdg-open "<url>"` or `start "" "<url>"`.
 - **Google, DuckDuckGo and a plain URL need no block.** Look already offers an
   **Open in browser** row for anything that looks like a URL, and `Cmd+Enter`
   on any query runs a web search with it.
