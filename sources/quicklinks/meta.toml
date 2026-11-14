@@ -2,6 +2,6 @@
 
 name        = "Quicklinks"
 description = "Ten searches you can type into: GitHub, npm, MDN, Stack Overflow, Maps and more."
-platforms   = ["macos"]
+platforms   = ["macos", "linux", "windows"]
 look        = "0.7.5"
 requires    = []

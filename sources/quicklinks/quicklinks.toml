@@ -29,43 +29,74 @@
 # so the file is also the list of what it can reach: change a line and it goes
 # somewhere else.
 #
-# `open` is macOS. On Linux every line is `xdg-open`, on Windows `start ""`.
+# One file for macOS, Linux and Windows, although Look reads each command with
+# a different shell: a POSIX one on macOS and Linux, `cmd` on Windows. Every
+# block is the same line with only its URL changed, and both shells read it:
+#
+#   set "url=<url>" && call start "" "%url%" || case ${OSTYPE:-$(uname)} ... esac
+#
+# - `set "url=<url>"` is the one command both understand. cmd sets %url%; sh
+#   sets $1 to `url=<url>`. So each URL is written once.
+# - `call start "" "%url%"` is Windows. cmd expands %url% when it reads the
+#   line, before `set` has run; `call` expands it again once it has. On macOS
+#   and Linux there is no `call`, so it fails and the `||` runs instead.
+# - The `case` is macOS and Linux, and cmd never reaches it: `start`
+#   succeeded. Darwin uses `open`; anything else uses `xdg-open`, never `open`,
+#   which on some Linux distros is an unrelated program (openvt).
+#
+# The opener is the only program started. bash and zsh name the OS in $OSTYPE,
+# so `uname` runs only under a shell that does not (dash), and `exec` hands the
+# shell's own process to the opener instead of starting another. The trailing
+# `\` in each block is TOML joining three lines into one: cmd stops reading at a
+# newline.
 
 [quicklinks-github]
 name    = "GitHub search"
 aliases = ["ghs"]
 icon    = "🐙"
-do      = ['''open "https://github.com/search?q={arg:url}&type=repositories"''']
+do      = ["""set "url=https://github.com/search?q={arg:url}&type=repositories" \
+           && call start "" "%url%" \
+           || case ${OSTYPE:-$(uname)} in [Dd]arwin*) exec open "${1#url=}" ;; *) exec xdg-open "${1#url=}" ;; esac"""]
 
 [quicklinks-npm]
 name    = "npm search"
 aliases = ["npms"]
 icon    = "📦"
-do      = ['''open "https://www.npmjs.com/search?q={arg:url}"''']
+do      = ["""set "url=https://www.npmjs.com/search?q={arg:url}" \
+           && call start "" "%url%" \
+           || case ${OSTYPE:-$(uname)} in [Dd]arwin*) exec open "${1#url=}" ;; *) exec xdg-open "${1#url=}" ;; esac"""]
 
 [quicklinks-mdn]
 name    = "MDN"
 aliases = ["mdn"]
 icon    = "🌐"
-do      = ['''open "https://developer.mozilla.org/en-US/search?q={arg:url}"''']
+do      = ["""set "url=https://developer.mozilla.org/en-US/search?q={arg:url}" \
+           && call start "" "%url%" \
+           || case ${OSTYPE:-$(uname)} in [Dd]arwin*) exec open "${1#url=}" ;; *) exec xdg-open "${1#url=}" ;; esac"""]
 
 [quicklinks-stackoverflow]
 name    = "Stack Overflow"
 aliases = ["sof"]
 icon    = "❓"
-do      = ['''open "https://stackoverflow.com/search?q={arg:url}"''']
+do      = ["""set "url=https://stackoverflow.com/search?q={arg:url}" \
+           && call start "" "%url%" \
+           || case ${OSTYPE:-$(uname)} in [Dd]arwin*) exec open "${1#url=}" ;; *) exec xdg-open "${1#url=}" ;; esac"""]
 
 [quicklinks-godoc]
 name    = "Go packages"
 aliases = ["godoc"]
 icon    = "🐹"
-do      = ['''open "https://pkg.go.dev/search?q={arg:url}"''']
+do      = ["""set "url=https://pkg.go.dev/search?q={arg:url}" \
+           && call start "" "%url%" \
+           || case ${OSTYPE:-$(uname)} in [Dd]arwin*) exec open "${1#url=}" ;; *) exec xdg-open "${1#url=}" ;; esac"""]
 
 [quicklinks-crates]
 name    = "crates.io"
 aliases = ["crates"]
 icon    = "🦀"
-do      = ['''open "https://crates.io/search?q={arg:url}"''']
+do      = ["""set "url=https://crates.io/search?q={arg:url}" \
+           && call start "" "%url%" \
+           || case ${OSTYPE:-$(uname)} in [Dd]arwin*) exec open "${1#url=}" ;; *) exec xdg-open "${1#url=}" ;; esac"""]
 
 [quicklinks-youtube]
 name    = "YouTube search"
@@ -73,7 +104,9 @@ aliases = ["yt"]
 icon    = "📺"
 # YouTube's parameter is `search_query`, not `q`: the short one silently
 # lands you on the home page.
-do      = ['''open "https://www.youtube.com/results?search_query={arg:url}"''']
+do      = ["""set "url=https://www.youtube.com/results?search_query={arg:url}" \
+           && call start "" "%url%" \
+           || case ${OSTYPE:-$(uname)} in [Dd]arwin*) exec open "${1#url=}" ;; *) exec xdg-open "${1#url=}" ;; esac"""]
 
 [quicklinks-maps]
 name    = "Google Maps"
@@ -81,16 +114,22 @@ aliases = ["maps"]
 icon    = "🗺"
 # The documented entry point for a search, rather than a /maps/search/<text>
 # path: `api=1` is Google's promise that this URL keeps working.
-do      = ['''open "https://www.google.com/maps/search/?api=1&query={arg:url}"''']
+do      = ["""set "url=https://www.google.com/maps/search/?api=1&query={arg:url}" \
+           && call start "" "%url%" \
+           || case ${OSTYPE:-$(uname)} in [Dd]arwin*) exec open "${1#url=}" ;; *) exec xdg-open "${1#url=}" ;; esac"""]
 
 [quicklinks-dockerhub]
 name    = "Docker Hub"
 aliases = ["dhub"]
 icon    = "🐳"
-do      = ['''open "https://hub.docker.com/search?q={arg:url}"''']
+do      = ["""set "url=https://hub.docker.com/search?q={arg:url}" \
+           && call start "" "%url%" \
+           || case ${OSTYPE:-$(uname)} in [Dd]arwin*) exec open "${1#url=}" ;; *) exec xdg-open "${1#url=}" ;; esac"""]
 
 [quicklinks-caniuse]
 name    = "Can I use"
 aliases = ["caniuse"]
 icon    = "✅"
-do      = ['''open "https://caniuse.com/?search={arg:url}"''']
+do      = ["""set "url=https://caniuse.com/?search={arg:url}" \
+           && call start "" "%url%" \
+           || case ${OSTYPE:-$(uname)} in [Dd]arwin*) exec open "${1#url=}" ;; *) exec xdg-open "${1#url=}" ;; esac"""]
