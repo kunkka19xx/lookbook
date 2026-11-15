@@ -142,6 +142,7 @@ The **Platforms** column is what the author tested, not what might work. Where a
 | [browser-bookmarks](sources/browser-bookmarks) | python3 | two bookmark stores read as one list; favicons borrowed from another source's cache | macOS |
 | [timezone](sources/timezone)         | python3, jq | `{arg}` and `connect` in one folder: a converter you type into, a clock that stays current | macOS                 |
 | [convert](sources/convert)           | python3    | one `{arg}` block over a table the user extends; a rules file as the second block | macOS                 |
+| [browser-profiles](sources/browser-profiles) | python3 | one script for rows, preview and every action; a level other sources can borrow with `then` | Linux (sway); macOS untested |
 <!-- /index:sources -->
 
 ## The tiles

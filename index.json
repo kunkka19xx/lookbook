@@ -56,6 +56,19 @@
       "hash": "sha256:135c4d58b193d7087838298b44bdc1afb2808ab594464f4e7ccb5aca698ccd65"
     },
     {
+      "id": "browser-profiles",
+      "name": "Browser profiles",
+      "description": "Every browser profile as a row: Enter opens a window in it, with no profile picker and no flag to remember.",
+      "platforms": ["linux", "macos"],
+      "look": "0.7.5",
+      "requires": ["python3"],
+      "files": ["browser-profiles.toml"],
+      "bin": ["browser-profiles"],
+      "readme": "sources/browser-profiles/README.md",
+      "path": "sources/browser-profiles/",
+      "hash": "sha256:ad1792098d5688c160782d17b297ac0293b957221504b4483e2c9e088399ee31"
+    },
+    {
       "id": "close-windows",
       "name": "Close windows",
       "description": "One row that ends the day: everything you have open goes away.",

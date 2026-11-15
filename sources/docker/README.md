@@ -8,7 +8,7 @@ Read this one for per-row icons, `format = "json"`, a preview drawn as a layout,
 
 **Requires.** Look v0.7.5 or newer (for the laid-out preview), `docker` with the Compose plugin (`docker compose`), `jq`, and `bash`. A terminal for the shell and the logs; a clipboard tool (`wl-copy` or `xclip`) on Linux for `Copy name`.
 
-**Platforms.** Linux, tested with alacritty on niri. macOS is written and the rows, preview and actions are the same commands, but the terminal half of `bin/docker-do` has not been run on a Mac since it was rewritten: if Enter opens nothing there, that function is where to look. Untested on Windows.
+**Platforms.** Linux, tested with alacritty on sway. macOS is written and the rows, preview and actions are the same commands, but the terminal half of `bin/docker-do` has not been run on a Mac since it was rewritten: if Enter opens nothing there, that function is where to look. Untested on Windows.
 
 ## Install
 

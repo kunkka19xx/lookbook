@@ -1,0 +1,394 @@
+#!/usr/bin/env python3
+"""Browser profiles as Look rows, and the commands that open one.
+
+    browser-profiles rows                 every profile, one JSON object per line
+    browser-profiles preview <id>         the panel: whose it is, what Enter runs
+    browser-profiles open <id> [url]      a window in that profile
+    browser-profiles private <id>         a private window in that profile
+    browser-profiles url <id>             the link on the clipboard, in that profile
+
+Declared by ~/.look/sources/browser-profiles.toml. A row's id is
+"<browser>/<profile>", for example "chrome/Profile 2" or "firefox/work".
+
+Firefox and the Chromium browsers (Brave, Chrome, Chromium, Edge, Vivaldi).
+The two families name a profile differently, and that is the whole reason this
+is worth having: Chromium wants the FOLDER ("Profile 2") on its command line
+while showing you the name you chose ("Work"), and the only place the two are
+written side by side is a JSON file nobody opens.
+"""
+
+import configparser
+import json
+import os
+import shutil
+import subprocess
+import sys
+
+# ----------------------------------------------------------------- settings --
+# Each can also be set as an environment variable. Look runs this through a
+# LOGIN shell, which does not read ~/.zshrc or ~/.bashrc, so the reliable place
+# is the `run` line in browser-profiles.toml:
+#
+#   run = "LOOK_PROFILES_BROWSERS=chrome,firefox ~/.look/bin/browser-profiles rows"
+
+# Which browsers to list. "auto" is every browser below that has profiles here.
+BROWSERS = os.environ.get("LOOK_PROFILES_BROWSERS", "auto")
+
+HOME = os.path.expanduser("~")
+MAC = sys.platform == "darwin"
+
+# Per browser: what to call it, which family it is, the commands that start it
+# on Linux in the order worth trying, its app name on macOS, its Flatpak id,
+# and the flag for a private window, the one thing the Chromium browsers do
+# not agree on.
+BROWSER = {
+    "chrome": {
+        "name": "Chrome", "engine": "chromium", "app": "Google Chrome",
+        "bin": ["google-chrome-stable", "google-chrome"],
+        "flatpak": "com.google.Chrome", "private": "--incognito",
+    },
+    "brave": {
+        "name": "Brave", "engine": "chromium", "app": "Brave Browser",
+        "bin": ["brave", "brave-browser"],
+        "flatpak": "com.brave.Browser", "private": "--incognito",
+    },
+    "chromium": {
+        "name": "Chromium", "engine": "chromium", "app": "Chromium",
+        "bin": ["chromium", "chromium-browser"],
+        "flatpak": "org.chromium.Chromium", "private": "--incognito",
+    },
+    "edge": {
+        "name": "Edge", "engine": "chromium", "app": "Microsoft Edge",
+        "bin": ["microsoft-edge-stable", "microsoft-edge"],
+        "flatpak": "com.microsoft.Edge", "private": "--inprivate",
+    },
+    "vivaldi": {
+        "name": "Vivaldi", "engine": "chromium", "app": "Vivaldi",
+        "bin": ["vivaldi-stable", "vivaldi"],
+        "flatpak": "com.vivaldi.Vivaldi", "private": "--incognito",
+    },
+    "firefox": {
+        "name": "Firefox", "engine": "mozilla", "app": "Firefox",
+        "bin": ["firefox"],
+        "flatpak": "org.mozilla.firefox", "private": "--private-window",
+    },
+}
+
+
+def bases_of(browser):
+    """Every directory a browser might keep its profiles in, as (path, flatpak).
+
+    A browser that is not installed has no such directory, so listing all of
+    them costs nothing. The same places bin/browser-bookmarks-rows walks.
+    """
+    if MAC:
+        support = os.path.join(HOME, "Library", "Application Support")
+        return {
+            "chrome": [(os.path.join(support, "Google", "Chrome"), False)],
+            "brave": [(os.path.join(support, "BraveSoftware", "Brave-Browser"), False)],
+            "chromium": [(os.path.join(support, "Chromium"), False)],
+            "edge": [(os.path.join(support, "Microsoft Edge"), False)],
+            "vivaldi": [(os.path.join(support, "Vivaldi"), False)],
+            "firefox": [(os.path.join(support, "Firefox"), False)],
+        }[browser]
+
+    config = os.path.join(HOME, ".config")
+    flatpak = os.path.join(HOME, ".var", "app")
+    return {
+        "chrome": [
+            (os.path.join(config, "google-chrome"), False),
+            (os.path.join(flatpak, "com.google.Chrome", "config", "google-chrome"), True),
+        ],
+        "brave": [
+            (os.path.join(config, "BraveSoftware", "Brave-Browser"), False),
+            (os.path.join(flatpak, "com.brave.Browser", "config", "BraveSoftware", "Brave-Browser"), True),
+        ],
+        "chromium": [
+            (os.path.join(config, "chromium"), False),
+            (os.path.join(HOME, "snap", "chromium", "common", "chromium"), False),
+            (os.path.join(flatpak, "org.chromium.Chromium", "config", "chromium"), True),
+        ],
+        "edge": [
+            (os.path.join(config, "microsoft-edge"), False),
+            (os.path.join(flatpak, "com.microsoft.Edge", "config", "microsoft-edge"), True),
+        ],
+        "vivaldi": [
+            (os.path.join(config, "vivaldi"), False),
+            (os.path.join(flatpak, "com.vivaldi.Vivaldi", "config", "vivaldi"), True),
+        ],
+        "firefox": [
+            (os.path.join(config, "mozilla", "firefox"), False),
+            (os.path.join(HOME, ".mozilla", "firefox"), False),
+            (os.path.join(HOME, "snap", "firefox", "common", ".mozilla", "firefox"), False),
+            (os.path.join(flatpak, "org.mozilla.firefox", ".mozilla", "firefox"), True),
+        ],
+    }[browser]
+
+
+def chromium_profiles(base):
+    """(folder, name, account, avatar) for each profile under one base.
+
+    `Local State` is the file the profile picker itself is drawn from. A
+    profile's folder never changes and its name is whatever you last typed, so
+    the folder is the id and the name is only what the row shows.
+    """
+    try:
+        with open(os.path.join(base, "Local State"), encoding="utf-8") as handle:
+            cache = json.load(handle).get("profile", {}).get("info_cache", {})
+    except (OSError, ValueError):
+        return
+
+    def recent(item):
+        return -(item[1].get("active_time") or 0)
+
+    # Most recently used first, which is the one you are most likely after.
+    for folder, info in sorted(cache.items(), key=recent):
+        if not os.path.isdir(os.path.join(base, folder)):
+            continue
+        avatar = os.path.join(base, folder, info.get("gaia_picture_file_name") or "-")
+        yield (
+            folder,
+            info.get("name") or folder,
+            info.get("user_name") or "",
+            avatar if os.path.isfile(avatar) else None,
+        )
+
+
+def mozilla_profiles(base):
+    """(name, name, "", None) for each profile in one profiles.ini.
+
+    Firefox takes the name itself on its command line (`-P work`), so the name
+    is both the id and what the row shows. It keeps no account beside it.
+    """
+    listing = configparser.ConfigParser(interpolation=None)
+    try:
+        listing.read(os.path.join(base, "profiles.ini"), encoding="utf-8")
+    except configparser.Error:
+        return
+    for section in listing.sections():
+        if not section.startswith("Profile"):
+            continue
+        name = listing[section].get("Name")
+        if name:
+            yield name, name, "", None
+
+
+def selected_browsers():
+    if BROWSERS == "auto":
+        return list(BROWSER)
+    chosen = []
+    for word in BROWSERS.replace(",", " ").split():
+        if word in BROWSER:
+            chosen.append(word)
+        else:
+            print(
+                f"LOOK_PROFILES_BROWSERS: no browser called {word!r} "
+                f"(known: {', '.join(BROWSER)})",
+                file=sys.stderr,
+            )
+    return chosen
+
+
+def all_profiles():
+    """Every profile as a dict, the first base that has one winning.
+
+    A browser installed twice, natively and as a Flatpak, has two sets of
+    profiles. The native one keeps the plain id; the other says where it lives,
+    so both can be listed and neither is opened with the wrong command.
+    """
+    for browser in selected_browsers():
+        engine = BROWSER[browser]["engine"]
+        taken = set()
+        for base, flatpak in bases_of(browser):
+            if not os.path.isdir(base):
+                continue
+            found = chromium_profiles(base) if engine == "chromium" else mozilla_profiles(base)
+            for key, name, account, avatar in found or ():
+                tag = browser + ("@flatpak" if flatpak else "")
+                profile_id = f"{tag}/{key}"
+                if profile_id in taken:
+                    continue
+                taken.add(profile_id)
+                yield {
+                    "id": profile_id, "browser": browser, "flatpak": flatpak,
+                    "key": key, "name": name, "account": account,
+                    "avatar": avatar, "base": base,
+                }
+
+
+def find(profile_id):
+    for profile in all_profiles():
+        if profile["id"] == profile_id:
+            return profile
+    fail(f"no profile called {profile_id}. Reload Look to refresh the list.")
+
+
+# ------------------------------------------------------------------ opening --
+
+
+def say(message):
+    """A step has no terminal, so a failure is also sent as a notification."""
+    print(f"browser-profiles: {message}", file=sys.stderr)
+    try:
+        if MAC:
+            subprocess.run(
+                ["osascript", "-e", "on run argv",
+                 "-e", 'display notification (item 1 of argv) with title "Browser profiles"',
+                 "-e", "end run", message],
+                check=False, capture_output=True,
+            )
+        elif shutil.which("notify-send"):
+            subprocess.run(["notify-send", "Browser profiles", message], check=False)
+    except OSError:
+        pass
+
+
+def fail(message):
+    say(message)
+    sys.exit(1)
+
+
+def command_for(profile, private=False, url=None):
+    """The whole command line that opens this profile, as a list."""
+    browser = BROWSER[profile["browser"]]
+
+    if browser["engine"] == "chromium":
+        flags = ["--profile-directory=" + profile["key"]]
+        # No URL means "a window", which has to be asked for: a Chromium that
+        # is already running would otherwise just raise the window it has.
+        if not url and not private:
+            flags.append("--new-window")
+    else:
+        flags = ["-P", profile["key"]]
+    if private:
+        flags.append(browser["private"])
+    if url:
+        flags.append(url)
+
+    if MAC:
+        # -n because an already-running browser ignores --args without it.
+        return ["open", "-na", browser["app"], "--args"] + flags
+    if profile["flatpak"]:
+        return ["flatpak", "run", browser["flatpak"]] + flags
+    for candidate in browser["bin"]:
+        if shutil.which(candidate):
+            return [candidate] + flags
+    fail(f"{browser['name']} has profiles here but none of "
+         f"{', '.join(browser['bin'])} is on PATH.")
+
+
+def launch(command):
+    """Start it and return at once.
+
+    Detached, because a browser that was not running yet becomes the process
+    we started, and would hold the step open until the window is closed.
+    """
+    try:
+        subprocess.Popen(
+            command, start_new_session=True,
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+    except OSError as err:
+        fail(f"could not start {command[0]}: {err}")
+
+
+def clipboard():
+    for tool in (["pbpaste"], ["wl-paste", "--no-newline"], ["xclip", "-selection", "clipboard", "-o"]):
+        if shutil.which(tool[0]):
+            try:
+                return subprocess.run(tool, capture_output=True, text=True, timeout=3).stdout.strip()
+            except (OSError, subprocess.SubprocessError):
+                return ""
+    fail("no clipboard tool: install wl-clipboard or xclip.")
+
+
+def link_or_fail(text):
+    """Only http(s). What is on a clipboard is whatever was copied last, and
+    anything else handed to a browser is a file path or a search for nonsense.
+    """
+    first = text.split()[0] if text.split() else ""
+    if not first.startswith(("http://", "https://")):
+        shown = (first[:40] + "…") if len(first) > 40 else first
+        fail(f"not a link: {shown or 'nothing was given'}")
+    return first
+
+
+# ------------------------------------------------------------------ commands --
+
+
+def rows():
+    profiles = list(all_profiles())
+    if not profiles:
+        # Printing nothing keeps the rows from the last good run, which is why
+        # this says it on stderr and exits 0 rather than failing.
+        print("browser-profiles: no browser profiles found", file=sys.stderr)
+        return
+    for profile in profiles:
+        browser = BROWSER[profile["browser"]]["name"]
+        if profile["flatpak"]:
+            browser += " Flatpak"
+        # The browser is in the title, not only under it: two browsers can each
+        # have a "Work", and the title is what you read and what you type.
+        row = {
+            "id": profile["id"],
+            "title": f"{profile['name']} ({browser})",
+            "subtitle": profile["account"] or f"{browser} profile",
+        }
+        if profile["avatar"]:
+            row["icon"] = profile["avatar"]
+        print(json.dumps(row, ensure_ascii=False))
+
+
+def preview(profile_id):
+    profile = find(profile_id)
+    browser = BROWSER[profile["browser"]]["name"]
+    fields = [
+        ("Browser", browser + (" (Flatpak)" if profile["flatpak"] else "")),
+        ("Profile", profile["name"]),
+        ("Account", profile["account"] or "not signed in"),
+        ("Folder", os.path.join(profile["base"], profile["key"]).replace(HOME, "~", 1)
+         if BROWSER[profile["browser"]]["engine"] == "chromium" else ""),
+    ]
+    print(json.dumps([
+        {"type": "fields",
+         "rows": [{"label": label, "value": value} for label, value in fields if value]},
+        {"type": "code", "text": " ".join(
+            # Shown the way you would type it, so it can be lifted into a
+            # script or a .desktop file.
+            f"'{part}'" if " " in part else part for part in command_for(profile)
+        )},
+    ], ensure_ascii=False))
+
+
+def main():
+    args = sys.argv[1:]
+    command = args[0] if args else ""
+
+    if command in ("", "-h", "--help"):
+        print(__doc__.strip())
+        sys.exit(0 if command else 1)
+    if command == "rows":
+        rows()
+        return
+    if len(args) < 2:
+        fail(f"{command} needs a profile id, such as chrome/Default.")
+
+    profile_id = args[1]
+    if command == "preview":
+        preview(profile_id)
+    elif command == "open":
+        url = link_or_fail(args[2]) if len(args) > 2 else None
+        launch(command_for(find(profile_id), url=url))
+    elif command == "private":
+        launch(command_for(find(profile_id), private=True))
+    elif command == "url":
+        launch(command_for(find(profile_id), url=link_or_fail(clipboard())))
+    else:
+        fail(f"unknown command {command!r} (browser-profiles --help)")
+
+
+try:
+    main()
+except BrokenPipeError:
+    os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+    sys.exit(0)
