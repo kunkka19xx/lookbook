@@ -2,6 +2,8 @@
 
 Ready-made **sources** and **tiles** for [Look](https://github.com/kunkka19xx/look).
 
+Made one, want one, or stuck on one? Bring it to `#lookbook-share` on the [Look Discord](https://discord.gg/vJSpNpeFBn).
+
 Two kinds, because Look reads two files, and which one a thing goes into decides how you install it:
 
 | | What it is | Lives in | Installed by |
@@ -133,7 +135,7 @@ The **Platforms** column is what the author tested, not what might work. Where a
 | [downloads-live](sources/downloads-live) | bash, jq | `connect`: a program that stays running and pushes rows, and fills the preview | macOS, Linux |
 | [vscode](sources/vscode)             | python3    | `run` + `format = "json"`: an editor's own recent list, rows that are real folders | macOS                 |
 | [github](sources/github)             | gh, jq     | four network lists in one file; `preview` as a CI check; shared `then` actions | macOS, Linux          |
-| [quicklinks](sources/quicklinks)     | none       | `{arg}` and `{arg:url}`: ten blocks you type into, no tool at all | macOS                 |
+| [quicklinks](sources/quicklinks)     | none       | `{arg}` and `{arg:url}`: ten blocks you type into, no tool at all | macOS, Linux, Windows |
 | [snippets](sources/snippets)         | none       | `dir` whose Enter copies instead of opening; `{arg}` writing a new file | macOS                 |
 | [devutils](sources/devutils)         | jq, python3 | `preview` showing the exact answer before Enter copies it | macOS, Linux          |
 | [emoji](sources/emoji)               | python3    | 1,800 rows generated from Unicode itself; the clearest case for `scope` | macOS                 |
@@ -165,6 +167,8 @@ Most of them touch only what you point them at. One does not, on purpose: [brows
 ## Contributing
 
 Yes please. `make new NAME=tmux` scaffolds one with every rename already done. One folder per example, [the rules are short](CONTRIBUTING.md), and CI parses every file with Look's own parser so a typo cannot reach anyone. Two things we ask beyond that: **install it and use it before you commit** (parsing is not running), and **say which platforms you actually tested on**.
+
+Not ready for a PR yet? Post it in `#lookbook-share` on [Discord](https://discord.gg/vJSpNpeFBn) first. Someone on another platform can try it, which is how a macOS-only example picks up its Linux and Windows lines.
 
 **AI-assisted contributions are welcome.** How it was written does not matter; what we review is whether it is **useful** to someone besides you, **well documented** (a README with its **Requires** and **Platforms** lines and a **Customise** section), and **tested** by installing it in Look and using it. You are the author either way, so read every line before you open the PR and be ready to answer for it.
 
