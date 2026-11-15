@@ -1,0 +1,92 @@
+# Every Compose project Docker knows about, wherever its file lives.
+#
+# The point of this one is the `cd` you no longer do. `docker compose` wants to
+# be run from the project's folder, and Docker already remembers which folder
+# that was, so the rows carry it instead of you.
+#
+# Each row's `path` is its compose file, which makes it a real file to Look:
+# Cmd+E edits it and Cmd+T opens a terminal beside it, with nothing declared.
+
+[docker-compose]
+name    = "Compose projects"
+icon    = "🐙"
+run     = "~/.look/bin/docker-rows --compose"
+format  = "json"
+timeout = "10s"
+
+# `lcompose buzz` lists only the projects matching "buzz". The `l` is the same
+# rule as `ldocker`: the bare word is already busy on most machines.
+aliases = ["lcompose"]
+scope   = true
+
+# Service, status and ports, one line each.
+preview = "~/.look/bin/docker-do compose-preview {id}"
+
+# Every service's logs, interleaved and followed, in your terminal.
+open = "~/.look/bin/docker-do compose-logs {id}"
+
+then = [
+  "docker-compose-containers",
+  "docker-compose-up",
+  "docker-compose-restart",
+  "docker-compose-stop",
+  "docker-compose-down",
+]
+
+
+# A level, not an action: it produces rows, so Cmd+K descends into them and Esc
+# comes back. `run` is asked while the project is still the selected row, which
+# is why {id} here is the project and {id} in the verbs below it is a container.
+# The actions are the container block's own, reached from here as well.
+[docker-compose-containers]
+name    = "Its containers"
+icon    = "🐳"
+run     = "~/.look/bin/docker-rows --project {id}"
+format  = "json"
+timeout = "10s"
+preview = "~/.look/bin/docker-do preview {id}"
+open    = "~/.look/bin/docker-do shell {id}"
+then    = [
+  "docker-containers-logs",
+  "docker-containers-browser",
+  "docker-containers-start",
+  "docker-containers-restart",
+  "docker-containers-stop",
+  "docker-containers-copy",
+  "docker-containers-copy-id",
+  "docker-containers-remove",
+]
+
+
+# In a terminal, because `up` may pull or build for a minute and a step has
+# nowhere to show that. The window closes by itself when it worked.
+[docker-compose-up]
+name = "Up"
+icon = "▶️"
+do   = ["~/.look/bin/docker-do compose-up {id}"]
+
+
+[docker-compose-restart]
+name    = "Restart project"
+icon    = "🔄"
+confirm = "Restart every service in {title}?"
+do      = ["docker compose -p {id} restart"]
+
+
+# Stop keeps the containers, so the project stays in this list and Up brings
+# it back. This is the one you want at the end of the day.
+[docker-compose-stop]
+name    = "Stop project"
+icon    = "⏹️"
+confirm = "Stop every service in {title}?"
+do      = ["docker compose -p {id} stop"]
+
+
+# Down removes the containers, and a project with no containers is one Docker
+# no longer lists: its row is gone after the next reload, until you run `up`
+# from its folder again. Named volumes are kept; this never passes `-v`.
+[docker-compose-down]
+name    = "Down"
+icon    = "🗑️"
+confirm = "Take {title} down? Its containers are removed and it leaves this list."
+do      = ["docker compose -p {id} down"]

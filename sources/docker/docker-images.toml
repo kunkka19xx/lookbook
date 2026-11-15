@@ -1,0 +1,50 @@
+# Every image on the machine, with the one fact `docker images` leaves out:
+# whether anything still uses it.
+#
+# 📦 has a container, running or stopped, so `docker rmi` would refuse it.
+# 💤 is tagged and unused. 👻 has no tag at all: an old build, superseded when
+# its name moved to a newer one, and almost always safe to lose.
+
+[docker-images]
+name    = "Container images"
+icon    = "📦"
+run     = "~/.look/bin/docker-rows --images"
+format  = "json"
+timeout = "10s"
+
+# `limages postgres` lists only the images matching "postgres".
+aliases = ["limages"]
+scope   = true
+
+# Tags, size, platform and what uses it, then the layers the size comes from.
+preview = "~/.look/bin/docker-do image-preview {id}"
+
+# A throwaway container to look around in: `docker run --rm -it`, with the
+# entrypoint swapped for a shell. It is gone again when you exit.
+open = "~/.look/bin/docker-do image-shell {id}"
+
+then = ["docker-images-pull", "docker-images-copy", "docker-images-remove"]
+
+
+# In a terminal, because a pull takes as long as it takes and a step has
+# nowhere to show progress.
+[docker-images-pull]
+name = "Pull again"
+icon = "⬇️"
+do   = ["~/.look/bin/docker-do image-pull {id}"]
+
+
+[docker-images-copy]
+name = "Copy name"
+icon = "📋"
+do   = ["~/.look/bin/docker-do copy {id}"]
+
+
+# Plain `rmi`, never `rmi -f`: Docker refuses an image a container still uses,
+# which is every 📦 row. Removing a tag deletes the image only when it was the
+# last name it had.
+[docker-images-remove]
+name    = "Remove image"
+icon    = "🗑️"
+confirm = "Remove image {title}?"
+do      = ["docker rmi {id}"]

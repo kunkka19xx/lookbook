@@ -59,6 +59,15 @@ name    = "Files"                            # NO: an app on macOS and GNOME
 aliases = ["code", "git", "notes", "open"]   # NO: an editor, a directory, a folder, a verb
 ```
 
+**Never claim a tool's own name; prefix it with `l`.** `docker`, `git`, `tmux`, `code`: the word a source is about is exactly the word the user's machine is already full of. There is an app called that, a folder called that, and a dozen files with it in their name, so an alias of `docker` buries the rows it was meant to find. The alias for a source about a tool is `l` (for Look) + the tool:
+
+```toml
+aliases = ["ldocker"]                     # good: finds this block and nothing else
+aliases = ["docker"]                         # NO: also Docker Desktop, every Dockerfile, ~/dev/docker-stuff
+```
+
+It is one extra letter and never ambiguous, and it is the same shape for every source, so nobody has to remember what each one chose.
+
 Ask what the word already means on a normal machine before you claim it. Most blocks need no alias at all. Do not paper over a generic name with `bias` either: that shifts the whole block in *every* query, and it is the user's call rather than yours.
 
 This is the one rule CI enforces on both halves, because it is the only thing keeping installed examples apart.

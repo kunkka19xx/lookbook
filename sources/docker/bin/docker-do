@@ -1,0 +1,427 @@
+#!/usr/bin/env bash
+#
+# Everything Look's docker sources do that is more than one docker command.
+#
+#   docker-do preview <container>          the panel: facts, then the last logs
+#   docker-do shell <container>            a shell inside it, in a terminal
+#   docker-do logs <container>             follow its logs, in a terminal
+#   docker-do browser <container>          open its first published port
+#   docker-do copy <text>                  put text on the clipboard
+#   docker-do copy-id <container>          put its short id on the clipboard
+#
+#   docker-do compose-preview <project>    the panel: its services
+#   docker-do compose-logs <project>       follow the whole project, in a terminal
+#   docker-do compose-up <project>         `up -d`, in a terminal so you see it pull
+#
+#   docker-do image-preview <image>        the panel: facts, then its layers
+#   docker-do image-shell <image>          a throwaway container from it, in a terminal
+#   docker-do image-pull <image>           pull it again, in a terminal
+#
+#   docker-do prune-preview <kind>         what a prune would delete: containers,
+#                                          dangling, unused or cache
+#   docker-do usage all                    `docker system df -v`, in a terminal
+#
+# It is one file because the parts that differ from machine to machine, which
+# terminal and how to hand it a command, are needed by four of these.
+#
+# EVERYTHING YOU MIGHT WANT TO CHANGE IS IN THE SECTION BELOW.
+
+set -euo pipefail
+
+
+# --------------------------------------------------------------- settings --
+
+# The terminal that Enter opens. Empty means: the `terminal=` you already gave
+# Look in ~/.look/config, the one Cmd+T uses. Failing that, the first one found
+# on Linux, and Terminal.app on macOS.
+TERMINAL_NAME="${LOOK_DOCKER_TERMINAL:-}"
+
+# How much history "follow logs" starts with, and how much the panel shows.
+FOLLOW_TAIL="${LOOK_DOCKER_FOLLOW_TAIL:-200}"
+PREVIEW_TAIL="${LOOK_DOCKER_PREVIEW_TAIL:-40}"
+
+
+# --------------------------------------------------------------- terminal --
+
+self="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+
+# Steps have no terminal to print to, so a failure is also sent as a desktop
+# notification where the machine has a way to show one.
+say() {
+    printf 'docker-do: %s\n' "$1" >&2
+    if [ "$(uname -s)" = "Darwin" ]; then
+        osascript -e 'on run argv' -e 'display notification (item 1 of argv) with title "Docker"' \
+            -e 'end run' "$1" >/dev/null 2>&1 || true
+    elif command -v notify-send >/dev/null 2>&1; then
+        notify-send "Docker" "$1" || true
+    fi
+}
+
+terminal_name() {
+    local name="$TERMINAL_NAME"
+    if [ -z "$name" ] && [ -r "$HOME/.look/config" ]; then
+        name="$(sed -n 's/^terminal=//p' "$HOME/.look/config" | head -n 1)"
+        name="${name%% #*}"
+    fi
+    if [ -z "$name" ] && [ "$(uname -s)" != "Darwin" ]; then
+        local candidate
+        for candidate in "${TERMINAL:-}" ghostty kitty alacritty foot wezterm \
+                         gnome-terminal konsole xterm; do
+            if [ -n "$candidate" ] && command -v "$candidate" >/dev/null 2>&1; then
+                name="$candidate"
+                break
+            fi
+        done
+    fi
+    # Look forgives case, a directory and a trailing .app in that key; so do we.
+    name="${name##*/}"
+    name="${name%.app}"
+    printf '%s' "$name" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]'
+}
+
+# Run "$@" in a new terminal window and return at once.
+in_terminal() {
+    local name
+    name="$(terminal_name)"
+
+    if [ "$(uname -s)" = "Darwin" ]; then
+        case "$name" in
+            ghostty)   open -na Ghostty --args -e "$@" ;;
+            alacritty) open -na Alacritty --args -e "$@" ;;
+            kitty)     open -na kitty --args "$@" ;;
+            wezterm)   open -na WezTerm --args start -- "$@" ;;
+            *)
+                # Terminal.app takes no command argument, so it is asked to
+                # type one. Also where an unknown name lands.
+                local line
+                line="$(printf '%q ' "$@")"
+                osascript -e 'on run argv' \
+                    -e 'tell application "Terminal" to do script (item 1 of argv)' \
+                    -e 'tell application "Terminal" to activate' \
+                    -e 'end run' "$line" >/dev/null
+                ;;
+        esac
+        return
+    fi
+
+    if [ -z "$name" ] || ! command -v "$name" >/dev/null 2>&1; then
+        say "no terminal found (${name:-none set}). Set terminal= in ~/.look/config."
+        exit 1
+    fi
+
+    case "$name" in
+        wezterm)                    set -- "$name" start -- "$@" ;;
+        gnome-terminal|ptyxis|kgx)  set -- "$name" -- "$@" ;;
+        *)                          set -- "$name" -e "$@" ;;   # ghostty, kitty, alacritty, foot, konsole, xterm
+    esac
+    nohup "$@" >/dev/null 2>&1 &
+}
+
+# A terminal closes when its command ends, taking the error with it.
+hold() {
+    printf '\n%s\nPress Enter to close. ' "$1"
+    read -r _ || true
+}
+
+
+# ------------------------------------------------------------- containers --
+
+state_of() {
+    docker inspect --format '{{.State.Status}}' "$1" 2>/dev/null || echo missing
+}
+
+# Runs inside the terminal. A stopped container has nothing to exec into, so it
+# asks rather than failing, and rather than starting something unasked.
+shell_here() {
+    local id="$1" state answer code=0
+    state="$(state_of "$id")"
+
+    if [ "$state" = "missing" ]; then
+        hold "$id is gone. Reload Look to refresh the list."
+        return
+    fi
+    if [ "$state" != "running" ]; then
+        printf '%s is %s. Start it and open a shell? [Y/n] ' "$id" "$state"
+        read -r answer || answer=n
+        case "$answer" in [nN]*) return ;; esac
+        docker start "$id" >/dev/null || { hold "Could not start $id."; return; }
+    fi
+
+    # bash where the image has it, sh where it does not.
+    docker exec -it "$id" sh -c 'command -v bash >/dev/null 2>&1 && exec bash; exec sh' || code=$?
+
+    # 125-127 are docker's own "could not run that", as opposed to your last
+    # command in the shell having failed, which is no reason to keep a window.
+    if [ "$code" -ge 125 ] && [ "$code" -le 127 ]; then
+        hold "No shell in $id: the image has neither bash nor sh."
+    elif [ "$code" -ne 0 ] && [ "$(state_of "$id")" != "running" ]; then
+        hold "$id stopped. Its last lines: docker logs --tail 20 $id"
+    fi
+}
+
+logs_here() {
+    docker logs --follow --tail "$FOLLOW_TAIL" "$1" || true
+    hold "$1 is not running, so there is nothing more to follow."
+}
+
+# Facts first, then the logs: a JSON array of blocks, which Look draws as a
+# layout. Rows with nothing to say are dropped rather than shown empty.
+preview() {
+    local id="$1" info status logs
+    if ! info="$(docker inspect "$id" 2>/dev/null)"; then
+        printf '%s is gone. Reload Look to refresh the list.\n' "$id"
+        return
+    fi
+    status="$(docker ps --all --filter "name=^/${id}\$" --format '{{.Status}}' | head -n 1)"
+    # Most images log to stderr, and colour codes mean nothing in the panel.
+    logs="$(docker logs --tail "$PREVIEW_TAIL" "$id" 2>&1 | sed $'s/\x1b\\[[0-9;]*[A-Za-z]//g' || true)"
+
+    jq -n --argjson info "$info" --arg status "$status" --arg logs "$logs" '
+      $info[0] as $c |
+      ($c.Config.Labels // {}) as $labels |
+
+      # A running container reports what is actually bound; a stopped one only
+      # what it was asked for.
+      ( [ ($c.NetworkSettings.Ports // {}) | to_entries[] | select(.value != null)
+          | "localhost:" + .value[0].HostPort + " → " + .key ]
+        | if length > 0 then . else
+            [ ($c.HostConfig.PortBindings // {}) | to_entries[] | select(.value != null)
+              | "localhost:" + .value[0].HostPort + " → " + .key + " (when running)" ]
+          end ) as $ports |
+
+      ( [ ($c.Mounts // [])[]
+          | ((.Name // .Source) | if test("^[0-9a-f]{64}$") then .[0:12] else . end)
+            + " → " + .Destination ] ) as $mounts |
+
+      ( [ ($c.NetworkSettings.Networks // {}) | to_entries[]
+          | .key + (if (.value.IPAddress // "") != "" then "  " + .value.IPAddress else "" end) ] ) as $nets |
+
+      [
+        # One row per port, mount and network. A value with a newline in it
+        # is drawn at the height of one row and runs into the next.
+        { type: "fields", rows: ([
+            { label: "Status",  value: $status },
+            { label: "Id",      value: (($c.Id // "") | .[0:12]) },
+            { label: "Image",   value: ($c.Config.Image // "") },
+            ($ports[]  | { label: "Port",    value: . }),
+            ($mounts[] | { label: "Mount",   value: . }),
+            ($nets[]   | { label: "Network", value: . }),
+            { label: "Compose", value: ([$labels["com.docker.compose.project"],
+                                         $labels["com.docker.compose.service"]]
+                                        | map(select(. != null)) | join(" / ")) },
+            { label: "Restart", value: ($c.HostConfig.RestartPolicy.Name // ""
+                                        | if . == "no" then "" else . end) }
+          ] | map(select(.value != ""))) },
+        (if $logs == "" then { type: "text", text: "No logs yet." }
+         else { type: "code", text: $logs } end)
+      ]'
+}
+
+# The first published TCP port, as a page. `docker port` prints
+# "80/tcp -> 0.0.0.0:5050", so the host port is whatever follows the last colon.
+browser() {
+    local id="$1" port url
+    port="$(docker port "$id" 2>/dev/null | awk -F: '/tcp/ { print $NF; exit }')"
+    if [ -z "$port" ]; then
+        say "$id publishes no port (or is not running)."
+        exit 1
+    fi
+    url="http://localhost:$port"
+    # Detached on Linux: when the default browser is not running yet, xdg-open
+    # becomes that browser and would hold the step until it is closed.
+    if [ "$(uname -s)" = "Darwin" ]; then open "$url"
+    else nohup xdg-open "$url" >/dev/null 2>&1 &
+    fi
+}
+
+copy() {
+    if [ "$(uname -s)" = "Darwin" ]; then printf %s "$1" | pbcopy
+    elif command -v wl-copy >/dev/null 2>&1; then printf %s "$1" | wl-copy
+    elif command -v xclip >/dev/null 2>&1; then printf %s "$1" | xclip -selection clipboard
+    else say "no clipboard tool: install wl-clipboard or xclip."; exit 1
+    fi
+}
+
+# The twelve characters `docker ps` prints, which is also the hostname inside
+# the container and so what its own logs tend to call it.
+copy_id() {
+    local full
+    if ! full="$(docker inspect --format '{{.Id}}' "$1" 2>/dev/null)"; then
+        say "$1 is gone. Reload Look to refresh the list."
+        exit 1
+    fi
+    copy "${full:0:12}"
+}
+
+
+# ---------------------------------------------------------------- compose --
+
+compose_preview() {
+    docker compose -p "$1" ps --all \
+        --format 'table {{.Service}}\t{{.Status}}\t{{.Ports}}' 2>&1
+}
+
+compose_logs_here() {
+    docker compose -p "$1" logs --follow --tail "$FOLLOW_TAIL" || true
+    hold "Nothing in $1 is running, so there is nothing more to follow."
+}
+
+# `up` is the one compose command that needs the files, not just the project
+# name. Docker remembers where they were, so nobody has to `cd` there.
+compose_up_here() {
+    local project="$1" files file
+    local -a args=(-p "$project")
+    files="$(docker compose ls --all --format json |
+        jq -r --arg p "$project" '.[] | select(.Name == $p) | .ConfigFiles')"
+    if [ -z "$files" ]; then
+        hold "Docker no longer knows a project called $project."
+        return
+    fi
+    while IFS= read -r file; do
+        [ -n "$file" ] && args+=(-f "$file")
+    done < <(printf '%s\n' "$files" | tr ',' '\n')
+
+    if docker compose "${args[@]}" up --detach; then
+        sleep 1
+    else
+        hold "docker compose up failed for $project."
+    fi
+}
+
+
+# ----------------------------------------------------------------- images --
+
+image_preview() {
+    local id="$1" info users layers
+    if ! info="$(docker image inspect "$id" 2>/dev/null)"; then
+        printf '%s is gone. Reload Look to refresh the list.\n' "$id"
+        return
+    fi
+    users="$(docker ps --all --filter "ancestor=$id" --format '{{.Names}}' | sort | tr '\n' ' ')"
+    # Biggest question about an image is where its size comes from.
+    layers="$(docker history --format '{{.Size}}\t{{.CreatedBy}}' "$id" 2>/dev/null |
+        awk -F'\t' '$1 != "0B" { printf "%8s  %s\n", $1, substr($2, 1, 90) }' | head -n 15)"
+
+    jq -n --argjson info "$info" --arg users "$users" --arg layers "$layers" '
+      $info[0] as $i |
+      [
+        { type: "fields", rows: ([
+            (($i.RepoTags // [])[] | { label: "Tag", value: . }),
+            { label: "Id",       value: ($i.Id | sub("^sha256:"; "") | .[0:12]) },
+            { label: "Size",     value: (($i.Size // 0) / 1048576 | floor | tostring + " MB") },
+            { label: "Created",  value: (($i.Created // "") | .[0:10]) },
+            { label: "Platform", value: ([$i.Os, $i.Architecture] | map(select(. != null)) | join("/")) },
+            { label: "Used by",  value: (if $users == "" then "nothing" else $users end) },
+            { label: "Exposes",  value: (($i.Config.ExposedPorts // {}) | keys | join(", ")) },
+            { label: "Runs",     value: ((($i.Config.Entrypoint // []) + ($i.Config.Cmd // [])) | join(" ")) }
+          ] | map(select(.value != ""))) },
+        (if $layers == "" then empty
+         else { type: "code", text: ("Layers that add size, newest first\n\n" + $layers) } end)
+      ]'
+}
+
+# A container that exists only for as long as the shell does: `--rm` takes it
+# away again on exit. The entrypoint is replaced so that an image whose own one
+# is a server gives you a prompt instead of starting it.
+image_shell_here() {
+    local id="$1" code=0
+    docker run --rm -it --entrypoint sh "$id" \
+        -c 'command -v bash >/dev/null 2>&1 && exec bash; exec sh' || code=$?
+    if [ "$code" -ge 125 ] && [ "$code" -le 127 ]; then
+        hold "Could not get a shell from $id: the image has neither bash nor sh."
+    fi
+}
+
+image_pull_here() {
+    if docker pull "$1"; then
+        sleep 1
+    else
+        hold "docker pull failed for $1."
+    fi
+}
+
+
+# ---------------------------------------------------------------- cleanup --
+
+# What each prune would take, listed before you say yes. The filters here are
+# docker's own definitions of what that prune removes, so the panel and the
+# command cannot disagree about a container that is merely stopped.
+prune_preview() {
+    local out
+    case "$1" in
+        containers)
+            out="$(docker ps --all --filter status=exited --filter status=created \
+                --filter status=dead --format '{{.Names}}\t{{.Status}}\t{{.Image}}')"
+            printf 'docker container prune would remove:\n\n'
+            ;;
+        dangling)
+            out="$(docker images --filter dangling=true --format '{{.ID}}\t{{.Size}}\t{{.CreatedSince}}')"
+            printf 'docker image prune would remove:\n\n'
+            ;;
+        unused)
+            out="$("$(dirname "$self")/docker-rows" --images |
+                jq -r 'select(.subtitle | endswith("unused")) | .title + "\t" + (.subtitle | split("  ·  ")[0])')"
+            printf 'docker image prune --all would remove:\n\n'
+            ;;
+        cache)
+            docker system df | awk 'NR == 1 || /^Build Cache/'
+            printf '\ndocker builder prune removes the reclaimable part.\n'
+            return
+            ;;
+        *) echo "docker-do prune-preview: containers, dangling, unused or cache" >&2; exit 1 ;;
+    esac
+    if [ -z "$out" ]; then
+        printf '  nothing. There is nothing to clean up here.\n'
+    else
+        printf '%s\n' "$out" | awk -F'\t' '{ printf "  %-34s %-12s %s\n", $1, $2, $3 }'
+        printf '\n%s in all.\n' "$(printf '%s\n' "$out" | wc -l | tr -d ' ')"
+    fi
+}
+
+usage_here() {
+    docker system df -v || true
+    hold "That is everything Docker is keeping on disk."
+}
+
+
+# ------------------------------------------------------------------ entry --
+
+command="${1:-}"
+target="${2:-}"
+
+case "$command" in
+    -h | --help | "")
+        sed -n '3,23p' "$0" | sed 's/^# \{0,1\}//'
+        [ -n "$command" ] || exit 1
+        exit 0
+        ;;
+esac
+[ -n "$target" ] || { echo "docker-do $command: needs a name" >&2; exit 1; }
+
+case "$command" in
+    preview)          preview "$target" ;;
+    shell)            in_terminal "$self" shell-here "$target" ;;
+    logs)             in_terminal "$self" logs-here "$target" ;;
+    browser)          browser "$target" ;;
+    copy)             copy "$target" ;;
+    copy-id)          copy_id "$target" ;;
+    compose-preview)  compose_preview "$target" ;;
+    compose-logs)     in_terminal "$self" compose-logs-here "$target" ;;
+    compose-up)       in_terminal "$self" compose-up-here "$target" ;;
+    image-preview)    image_preview "$target" ;;
+    image-shell)      in_terminal "$self" image-shell-here "$target" ;;
+    image-pull)       in_terminal "$self" image-pull-here "$target" ;;
+    prune-preview)    prune_preview "$target" ;;
+    usage)            in_terminal "$self" usage-here "$target" ;;
+
+    # What the terminal ones above run once the terminal is open.
+    shell-here)         shell_here "$target" ;;
+    logs-here)          logs_here "$target" ;;
+    compose-logs-here)  compose_logs_here "$target" ;;
+    compose-up-here)    compose_up_here "$target" ;;
+    image-shell-here)   image_shell_here "$target" ;;
+    image-pull-here)    image_pull_here "$target" ;;
+    usage-here)         usage_here ;;
+
+    *) echo "docker-do: unknown command \"$command\" (docker-do --help)" >&2; exit 1 ;;
+esac

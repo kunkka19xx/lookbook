@@ -1,13 +1,110 @@
 #!/usr/bin/env bash
-# Rows for Look's docker-containers source: one JSON object per line.
+# Rows for Look's docker sources: one JSON object per line.
 #
-# JSON rather than tab-separated lines, for the one field lines cannot carry:
-# a per-row `icon`, so a running container looks different from a stopped one.
+#   docker-rows                    every container
+#   docker-rows --project <name>   the containers of one Compose project
+#   docker-rows --compose          every Compose project
+#   docker-rows --images           every image, and whether anything uses it
+#
+# JSON rather than tab-separated lines, for the two fields lines cannot carry:
+# a per-row `icon`, so a running container looks different from a stopped one,
+# and `path`, which makes a Compose project's row its compose file.
 set -euo pipefail
 
-docker ps --all --format '{{json .}}' | jq -c '{
-  id:       .Names,
-  title:    .Names,
-  subtitle: (.Status + "  ·  " + .Image),
-  icon:     (if (.Status | startswith("Up")) then "🟢" else "⚫️" end)
-}'
+if [ "${1:-}" = "--compose" ]; then
+    # `compose ls` only knows projects that still have containers, which is why
+    # the Compose block offers Stop ahead of Down. ConfigFiles is a comma
+    # separated list; the first is the one the project directory comes from.
+    docker compose ls --all --format json | jq -c --arg home "$HOME" '.[] |
+      (.ConfigFiles | split(",")[0]) as $file |
+      {
+        id:       .Name,
+        title:    .Name,
+        subtitle: (.Status + "  ·  " + ($file | sub("^" + $home; "~"))),
+        path:     $file,
+        icon:     (if (.Status | test("running")) | not then "⚫️"
+                   elif (.Status | test("exited|paused|restarting|dead|created")) then "🟡"
+                   else "🟢" end)
+      }'
+    exit
+fi
+
+if [ "${1:-}" = "--images" ]; then
+    # Which images a container still points at, running or not: those are the
+    # ones `docker rmi` refuses, so the row says so before you try. One id per
+    # line, repeated once per container, which is what makes it a count.
+    containers="$(docker ps --all --quiet)"
+    used=""
+    if [ -n "$containers" ]; then
+        # shellcheck disable=SC2086  # a list of ids, split on purpose
+        used="$(docker inspect --format '{{.Image}}' $containers)"
+    fi
+
+    # The id is the name you would type, `repo:tag`, because that is what
+    # pull, run and rmi all take. An image with no tag has only its hash.
+    #
+    # Asked twice because a plain `docker images` has stopped listing untagged
+    # images on newer Docker, and they are the ones most worth seeing here.
+    # `unique_by` drops the overlap on a Docker that still lists them.
+    {
+        docker images --no-trunc --format '{{json .}}'
+        docker images --no-trunc --filter dangling=true --format '{{json .}}'
+    } | jq -sc --arg used "$used" '
+      ($used | split("\n") | map(select(. != ""))) as $ids |
+      (map(select(.Repository != "<none>")) + (map(select(.Repository == "<none>")) | unique_by(.ID))) | .[] |
+      (.ID | sub("^sha256:"; "") | .[0:12]) as $short |
+      (.Repository == "<none>" or .Tag == "<none>") as $untagged |
+      (.ID as $id | $ids | map(select(. == $id)) | length) as $count |
+      {
+        id:       (if $untagged then $short else .Repository + ":" + .Tag end),
+        title:    (if .Repository == "<none>" then "untagged " + $short
+                   elif .Tag == "<none>" then .Repository + " (untagged " + $short + ")"
+                   else .Repository + ":" + .Tag end),
+        subtitle: ([.Size, .CreatedSince,
+                    (if $count == 0 then "unused"
+                     elif $count == 1 then "used by 1 container"
+                     else "used by \($count) containers" end)] | join("  ·  ")),
+        icon:     (if $count > 0 then "📦" elif .Repository == "<none>" then "👻" else "💤" end)
+      }'
+    exit
+fi
+
+args=(ps --all --format '{{json .}}')
+if [ "${1:-}" = "--project" ]; then
+    args+=(--filter "label=com.docker.compose.project=${2:?docker-rows --project <name>}")
+fi
+
+# Published ports only, written the way you would type them into a browser:
+# ":5050→80" when the two sides differ, ":5432" when they do not. Docker lists
+# each one twice, for IPv4 and IPv6, hence `unique`.
+#
+# Running containers first. `sort_by` is stable, so inside each group Docker's
+# own order, newest first, survives.
+docker "${args[@]}" | jq -sc '
+  def ports:
+    [ (.Ports // "") | split(", ")[] | select(contains("->"))
+      | capture(":(?<host>[0-9-]+)->(?<inner>[0-9-]+)")
+      | if .host == .inner then ":" + .host else ":" + .host + "→" + .inner end
+    ] | unique | join(" ");
+
+  def unhealthy:
+    (.HealthStatus // "") == "unhealthy" or ((.Status // "") | contains("(unhealthy)"));
+
+  def glyph:
+    if   .State == "running" and unhealthy then "🔴"
+    elif .State == "running"               then "🟢"
+    elif .State == "paused" or .State == "restarting" then "🟡"
+    else "⚫️" end;
+
+  def rank:
+    if .State == "running" then 0
+    elif .State == "paused" or .State == "restarting" then 1
+    else 2 end;
+
+  sort_by(rank) | .[] |
+  {
+    id:       .Names,
+    title:    .Names,
+    subtitle: ([.Status, ports, .Image] | map(select(. != "")) | join("  ·  ")),
+    icon:     glyph
+  }'
