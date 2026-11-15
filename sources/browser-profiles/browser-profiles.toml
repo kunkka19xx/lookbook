@@ -1,0 +1,69 @@
+# Your browser profiles as rows. Type `lprofile`, pick one, and a window opens
+# in it: no profile picker, and no `--profile-directory="Profile 3"`.
+#
+# Firefox and the Chromium browsers (Brave, Chrome, Chromium, Edge, Vivaldi),
+# found by themselves. The work is in bin/browser-profiles, because a profile's
+# name and the thing its browser wants on the command line are two different
+# strings, kept in a different file per browser family.
+
+[browser-profiles]
+name   = "Browser profiles"
+icon   = "👤"
+format = "json"
+
+# `lprofile work` lists only the profiles matching "work". The `l` is so the
+# word answers to nothing else: `profile` is a file in half of all home
+# directories, and `chrome` is the browser itself. `lbp` is the same thing in
+# three keys: Look Browser Profile.
+aliases = ["lprofile", "lbp"]
+scope   = true
+
+# Every browser that has profiles here. Narrow it on this line, rather than
+# from your shell rc, which a login shell never reads:
+#   run = "LOOK_PROFILES_BROWSERS=chrome ~/.look/bin/browser-profiles rows"
+run = "~/.look/bin/browser-profiles rows"
+
+# Whose profile it is, and the exact command Enter runs.
+preview = "~/.look/bin/browser-profiles preview {id}"
+
+# A new window in that profile. The browser starts if it was not running.
+open = "~/.look/bin/browser-profiles open {id}"
+
+then = ["browser-profiles-private", "browser-profiles-url"]
+
+
+[browser-profiles-private]
+name = "Open private window"
+icon = "🕶️"
+do   = ["~/.look/bin/browser-profiles private {id}"]
+
+
+# For the link somebody sent you that has to open signed in as work, not as
+# you. Copy it, come here, pick the profile. Anything on the clipboard that is
+# not an http(s) link is refused rather than handed to the browser.
+[browser-profiles-url]
+name = "Open copied link here"
+icon = "🔗"
+do   = ["~/.look/bin/browser-profiles url {id}"]
+
+
+# The other direction: start from a link, then choose the profile. This block
+# is a level, reached from another block's `then`, and never a row you can type
+# for, because its `run` names {id}. Nothing here uses it; add
+#
+#   then = ["browser-profiles-for-link"]
+#
+# to any block whose row id is a URL (browser-bookmarks, browser-history,
+# bookmarks, quicklinks) and Cmd+K on a link offers "Open in profile".
+#
+# `run` is asked while the link is still the selected row, and `open` acts on a
+# profile it produced, so there the link is one level out: {parent.id}. The
+# script ignores the argument after `rows`; it is on the line only to make this
+# a level.
+[browser-profiles-for-link]
+name    = "Open in profile"
+icon    = "👤"
+format  = "json"
+run     = "~/.look/bin/browser-profiles rows {id}"
+preview = "~/.look/bin/browser-profiles preview {id}"
+open    = "~/.look/bin/browser-profiles open {id} {parent.id}"
