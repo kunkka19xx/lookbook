@@ -47,7 +47,7 @@ flowchart LR
 
 Five things the picture leaves out:
 
-- **A file holds as many blocks as you like**, one producer each. `sources/docker` is one file with three: a `run` block listing containers, and two `do` blocks it reaches with `then`.
+- **A file holds as many blocks as you like**, one producer each. `sources/docker/docker-containers.toml` is one file with eight: a `run` block listing containers, and seven `do` blocks it reaches with `then`.
 - **A path row can do more than a text row.** `dir` rows are real filesystem objects, so `{path}`, `Cmd+E`, `Cmd+T` and `Cmd+F` work and Enter opens the folder with no `open` declared. `file` and `run` rows are text: give them an `open`, or `format = "json"` to carry a path and a per-row icon.
 - **Every step is shell text**, run through your login shell (`$SHELL -lc`, or `cmd /D /S /C` on Windows), so `&&`, `|`, `>`, `$VAR` and globs work. That is a *non-interactive* shell: it never reads `~/.zshrc`, so a `PATH` entry or alias living there is missing, move it to `~/.zshenv`, or name the binary in full. fish and nu are passed over for `/bin/sh`. A script can read `LOOK_ID`, `LOOK_TITLE` and `LOOK_PATH` instead of taking arguments.
 - **A producer that names a placeholder is not a top-level row.** `run = "git -C {path} branch"` means nothing with no project selected, so Look indexes it only as another block's `then` target. The producer is the `do` / `dir` / `file` / `run` line **and its `cwd`**; `open`, `preview` and the other verbs do not count, because those already act on a row the block produced.
@@ -81,7 +81,7 @@ The five that catch people:
 
 - **A name or alias that is already busy on your machine.** This one is silent and easy to miss. A block's `name` and `aliases` are what you type to reach its rows, and they compete with everything Look already indexes: your apps, files, folders, settings and history. `dev-projects` ships `aliases = ["repo", "git", "code"]`, and on a machine with a `~/code` folder or VS Code installed, typing `code` now returns a mixture. Nothing is broken and nothing is reported; the list is just muddier than it was. Prefer a word that is distinctive on **your** machine, and reach for `bias` only when you want a generic word anyway. See [Choosing what to type](#choosing-what-to-type) below.
 - **A path that is not yours.** `dev-projects` lists `~/dev`. If your repos are in `~/code` or `~/work`, you get an empty list and nothing else.
-- **An app you do not have.** `ssh` and `docker` open Ghostty, `homebrew` upgrades in it, `tmux` attaches with WezTerm, `work-setup` opens Slack, Ghostty and Safari, `dev-projects` edits with `code`.
+- **An app you do not have.** `ssh` opens Ghostty, `homebrew` upgrades in it, `tmux` attaches with WezTerm, `work-setup` opens Slack, Ghostty and Safari, `dev-projects` edits with `code`.
 - **`open`, which is macOS.** On Linux that is `xdg-open`, on Windows `start ""`. Most of these were tested on macOS only; the table below says which.
 - **A file that has to be there.** `ssh` reads your `~/.ssh/config`. Anything shipping a `bin/` script needs that script in `~/.look/bin/` first, which its README tells you.
 
@@ -117,7 +117,7 @@ The **Platforms** column is what the author tested, not what might work. Where a
 | [dev-projects](sources/dev-projects) | none       | `dir`: rows from a directory, custom verbs                    | macOS, Linux, Windows |
 | [ssh](sources/ssh)                   | ssh        | `run`: rows from a command, and the `file` alternative        | macOS                 |
 | [git](sources/git)                   | git        | two files in one folder; drill-downs, `confirm`, `{parent.*}` | macOS, Linux, Windows |
-| [docker](sources/docker)             | docker, jq | `format = "json"`, per-row icons, a helper script             | macOS                 |
+| [docker](sources/docker)             | docker, jq | `format = "json"`, per-row icons, a laid-out preview, a shared drill-down, bulk deletes that preview before they ask | Linux; macOS not re-run |
 | [tmux](sources/tmux)                 | tmux       | a `bin/` script doing real work; session per project          | macOS                 |
 | [browser-history](sources/browser-history) | sqlite3    | `run` + `format = "json"`: favicons as per-row icons, browsers picked by env var | Linux, macOS          |
 | [close-windows](sources/close-windows) | jq (Linux) | a multi-line `do` step; `confirm` on something irreversible; one file per OS | Linux (sway; more untested), macOS |

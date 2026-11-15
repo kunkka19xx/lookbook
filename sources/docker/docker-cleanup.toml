@@ -1,0 +1,74 @@
+# Getting disk back from Docker, without looking up which prune takes which
+# flag. Type `lprune` and all four are there.
+#
+# Every one is the same three lines, and that shape is the thing worth copying
+# for anything that deletes in bulk:
+#
+#   preview = "<what it would delete>"     read it in the panel first
+#   confirm = "<what is about to happen>"  then say yes
+#   do      = ["<the delete>"]
+#
+# The preview is docker's own definition of what that prune removes, asked
+# fresh each time you select the row, so it is the list as of now and not as
+# of the last reload.
+#
+# `bias = -400` on the four that delete keeps them under the rows they share a
+# word with: "Prune stopped containers" has "containers" in its own title, and
+# a title match would otherwise put it above every container when you type
+# `ctr`. `lprune` still finds them, since nothing else answers to it.
+#
+# Volumes are not here on purpose. A volume is where a database lives, and
+# there is no listing that tells you which unused one you will miss.
+
+# The one row that deletes nothing: how much there is to get back.
+[docker-cleanup-usage]
+name    = "Container disk usage"
+icon    = "💽"
+aliases = ["ldf"]
+preview = "docker system df"
+do      = ["~/.look/bin/docker-do usage all"]
+
+
+# Stopped is not the same as unwanted: a Compose project you stopped for the
+# evening is on this list too. Read the panel.
+[docker-cleanup-containers]
+name    = "Prune stopped containers"
+icon    = "🧹"
+aliases = ["lprune"]
+bias    = -400
+preview = "~/.look/bin/docker-do prune-preview containers"
+confirm = "Remove EVERY stopped container, the ones from stopped Compose projects included?"
+do      = ["docker container prune --force"]
+
+
+# The safe one: untagged leftovers from rebuilding and re-pulling.
+[docker-cleanup-dangling]
+name    = "Prune untagged images"
+icon    = "👻"
+aliases = ["lprune"]
+bias    = -400
+preview = "~/.look/bin/docker-do prune-preview dangling"
+confirm = "Remove every untagged image?"
+do      = ["docker image prune --force"]
+
+
+# Everything no container points at, tagged or not. You get the disk back and
+# pay for it with a pull or a build the next time you need one of them.
+[docker-cleanup-unused]
+name    = "Prune unused images"
+icon    = "💤"
+aliases = ["lprune"]
+bias    = -400
+preview = "~/.look/bin/docker-do prune-preview unused"
+confirm = "Remove EVERY image no container uses? They will have to be pulled or built again."
+do      = ["docker image prune --all --force"]
+
+
+[docker-cleanup-cache]
+name    = "Prune build cache"
+icon    = "🧱"
+aliases = ["lprune"]
+bias    = -400
+preview = "~/.look/bin/docker-do prune-preview cache"
+confirm = "Clear the build cache? The next build of each image starts from nothing."
+do      = ["docker builder prune --force"]

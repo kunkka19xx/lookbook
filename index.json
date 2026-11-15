@@ -110,15 +110,15 @@
     {
       "id": "docker",
       "name": "Docker containers",
-      "description": "Every container as a row, with status, logs in the preview, and a shell on Enter.",
-      "platforms": ["macos"],
-      "look": "0.6.12",
-      "requires": ["docker", "jq"],
-      "files": ["docker-containers.toml"],
-      "bin": ["docker-rows"],
+      "description": "Containers, Compose projects and images as rows: status and ports at a glance, logs in the preview, a shell on Enter, and guarded prunes.",
+      "platforms": ["linux", "macos"],
+      "look": "0.7.5",
+      "requires": ["docker", "jq", "bash"],
+      "files": ["docker-cleanup.toml", "docker-compose.toml", "docker-containers.toml", "docker-images.toml"],
+      "bin": ["docker-do", "docker-rows"],
       "readme": "sources/docker/README.md",
       "path": "sources/docker/",
-      "hash": "sha256:54249bfbfd07b8a948e9e8658d12d8b3e98d084441811c6b21d89c29db5cbe24"
+      "hash": "sha256:cc3c4528aaf3294647197ab0a3ae34356e2280a47a379754decaee03d3bad8b0"
     },
     {
       "id": "downloads-live",
