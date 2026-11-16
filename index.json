@@ -144,7 +144,7 @@
       "bin": ["downloads-live"],
       "readme": "sources/downloads-live/README.md",
       "path": "sources/downloads-live/",
-      "hash": "sha256:0876680c1f5e355eac411045146744d20d81cfd661b281ed0852faad6bd83abe"
+      "hash": "sha256:c7c50cf4534912e37c5be524d7aacd0e7215806c55ef85b73d48183c3586f939"
     },
     {
       "id": "emoji",
@@ -222,7 +222,7 @@
       "bin": ["meeting-next"],
       "readme": "sources/meeting/README.md",
       "path": "sources/meeting/",
-      "hash": "sha256:f425f0ad724bd9a5a866aadc092f2d32619baf0ea4655614e45c56c96563811a"
+      "hash": "sha256:1166edfd28ef69983a7396d5e513cbd93ba279f118c492b7d18d1f0ca3da534a"
     },
     {
       "id": "niri",

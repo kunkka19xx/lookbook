@@ -5,12 +5,21 @@ on:
     branches: [main]
   pull_request:
 
+# Nothing by default; each job asks for what it reads. See security.yml for why
+# the actions below are pinned to commits.
+permissions: {}
+
 jobs:
   examples:
     name: examples parse
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          # Nothing after this pushes, and check.sh clones Look anonymously.
+          persist-credentials: false
 
       # Look's own parsers are the only correct judge of these formats, so CI
       # borrows them rather than reimplementing the rules here.
@@ -24,9 +33,12 @@ jobs:
       - name: Check out the pinned Look
         run: ./scripts/check.sh --clone-only
 
-      - uses: dtolnay/rust-toolchain@stable
+      # The runner image already has rustup, so this needs no action of its
+      # own: one fewer third party with a say in what this job runs.
+      - name: Install stable Rust
+        run: rustup toolchain install stable --profile minimal && rustup default stable
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: .look-src/core
 
