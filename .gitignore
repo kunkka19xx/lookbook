@@ -2,3 +2,6 @@
 .look-src/
 .DS_Store
 **/.DS_Store
+
+# The scanners scripts/security.sh installs from scripts/security/requirements.txt.
+.security-tools/

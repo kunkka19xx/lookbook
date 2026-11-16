@@ -1,0 +1,5 @@
+# The scanners scripts/security.sh runs, pinned so CI and a laptop find the
+# same things. Dependabot proposes the bumps; see .github/dependabot.yml.
+bandit==1.9.4
+shellcheck-py==0.11.0.1
+zizmor==1.32.0
