@@ -2,6 +2,6 @@
 
 name        = "Timezone"
 description = "Timezone lookup and conversion from one typed line, offline, plus a live world clock."
-platforms   = ["macos"]
+platforms   = ["macos", "windows"]
 look        = "0.7.5"
 requires    = ["python3"]

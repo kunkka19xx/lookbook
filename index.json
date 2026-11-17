@@ -14,7 +14,7 @@
       "bin": [],
       "readme": "sources/archives/README.md",
       "path": "sources/archives/",
-      "hash": "sha256:5d82c6d16ff070c3af048858eb6d1fa7227bbdad56e185b3b35bc467d61840c9"
+      "hash": "sha256:1aceaad9e0f71cc759247dbbcada2e775f62298d4db33ae4c49794eb88e01fe1"
     },
     {
       "id": "bookmarks",
@@ -27,7 +27,7 @@
       "bin": [],
       "readme": "sources/bookmarks/README.md",
       "path": "sources/bookmarks/",
-      "hash": "sha256:bea1f75a46c0aea0152352688aca53ff73b7bc715ae0f6bb4376d0be765d3215"
+      "hash": "sha256:47ba54c7bc44d13ba2195a18e45b9f2e2aacd0e26505a241a25052d6b412eafa"
     },
     {
       "id": "browser-bookmarks",
@@ -40,7 +40,7 @@
       "bin": ["browser-bookmarks-rows"],
       "readme": "sources/browser-bookmarks/README.md",
       "path": "sources/browser-bookmarks/",
-      "hash": "sha256:6f3e7404da404c2c1cfaf455e591a2e70b11a573e1f5ccb99327f1a3975037cd"
+      "hash": "sha256:112f84d687df046667f8ddc6b292afc4aaa1474250a4f1f1648a13e1b4ea43ab"
     },
     {
       "id": "browser-history",
@@ -53,7 +53,7 @@
       "bin": ["browser-history-rows"],
       "readme": "sources/browser-history/README.md",
       "path": "sources/browser-history/",
-      "hash": "sha256:135c4d58b193d7087838298b44bdc1afb2808ab594464f4e7ccb5aca698ccd65"
+      "hash": "sha256:c59ca34a05097092bbb34cabbffd9c2bb06bb9031c991b67cd4ec0fbab0963dc"
     },
     {
       "id": "close-windows",
@@ -62,11 +62,11 @@
       "platforms": ["linux", "macos"],
       "look": "0.6.12",
       "requires": [],
-      "files": ["close-windows-macos.toml", "close-windows.toml"],
+      "files": ["close-windows.toml", "close-windows-macos.toml"],
       "bin": [],
       "readme": "sources/close-windows/README.md",
       "path": "sources/close-windows/",
-      "hash": "sha256:6d12a646403ed86eeb96a013072147309f99724d5d3ed661e8276fbfe882334b"
+      "hash": "sha256:c26596b9e484493061e69d01f12c6f524f14db08ddf3a8d8ec7bf60afe344f1b"
     },
     {
       "id": "convert",
@@ -79,7 +79,7 @@
       "bin": ["convert"],
       "readme": "sources/convert/README.md",
       "path": "sources/convert/",
-      "hash": "sha256:e664341fb7fbdf27ed889cee06806b91198d6b605c557f63a7ad3b8b49f3a752"
+      "hash": "sha256:a38f3fedfcb2c335ddf4816e9bb57f8d2ccac057a41c3247fef6818df3bf539b"
     },
     {
       "id": "dev-projects",
@@ -92,7 +92,7 @@
       "bin": [],
       "readme": "sources/dev-projects/README.md",
       "path": "sources/dev-projects/",
-      "hash": "sha256:276e09de6e0baeb8befbc353396a6a7fc26b7a14570748622cd5554fc40fa5c8"
+      "hash": "sha256:4069d5af6bca4de57b8295e4555982e6fd5acbda8d3b5a9b30ea1b404ef7774c"
     },
     {
       "id": "devutils",
@@ -105,7 +105,7 @@
       "bin": ["devutils"],
       "readme": "sources/devutils/README.md",
       "path": "sources/devutils/",
-      "hash": "sha256:34694e359824edfb26de90ff128202b850b72acaa77096218acd6d9f903ca909"
+      "hash": "sha256:57ffd4e201398f8216f56a52cdac4c2b3f86dbb743e8ddc64bb4a8a7a15f65b4"
     },
     {
       "id": "docker",
@@ -118,7 +118,7 @@
       "bin": ["docker-rows"],
       "readme": "sources/docker/README.md",
       "path": "sources/docker/",
-      "hash": "sha256:54249bfbfd07b8a948e9e8658d12d8b3e98d084441811c6b21d89c29db5cbe24"
+      "hash": "sha256:2c2c50110201d93df5423235d569d4ae341ddc671fd20d8bc6bb6cfe7c2b5da4"
     },
     {
       "id": "downloads-live",
@@ -131,7 +131,7 @@
       "bin": ["downloads-live"],
       "readme": "sources/downloads-live/README.md",
       "path": "sources/downloads-live/",
-      "hash": "sha256:0876680c1f5e355eac411045146744d20d81cfd661b281ed0852faad6bd83abe"
+      "hash": "sha256:b805e6804163fdcd51d7b3a9e33063c641114649061f0211af76174e08ed4254"
     },
     {
       "id": "emoji",
@@ -144,7 +144,7 @@
       "bin": ["emoji-rows"],
       "readme": "sources/emoji/README.md",
       "path": "sources/emoji/",
-      "hash": "sha256:a4994cc72a52087d09f52f67de578e22646b69b0f69373e4e2ce2a4c45459de4"
+      "hash": "sha256:44d86b61d6255eb776ac6a5eaa96dbf028aaa5654ac40dfb0742cb7b6bd79f1e"
     },
     {
       "id": "git",
@@ -157,7 +157,7 @@
       "bin": [],
       "readme": "sources/git/README.md",
       "path": "sources/git/",
-      "hash": "sha256:9cbe0ebde0d1fbb7145f2c83e1f56b92fa09f4c9daf545b6dd1e43433ed0f15b"
+      "hash": "sha256:ba026a324e625a53ff97cb8560ad1b77d5cbe89e4a4ed0fa709aa638197cb64a"
     },
     {
       "id": "github",
@@ -170,7 +170,7 @@
       "bin": ["github-preview"],
       "readme": "sources/github/README.md",
       "path": "sources/github/",
-      "hash": "sha256:8794233baae3fb500f72e010bf1a4d7f2e0dd31cec0a63ea6b5e7d1fb6b8c919"
+      "hash": "sha256:49a51c93deaa94e4b13f1525bc9b380226ce5874f3ef2d12070c139fd39b83f7"
     },
     {
       "id": "homebrew",
@@ -183,7 +183,7 @@
       "bin": [],
       "readme": "sources/homebrew/README.md",
       "path": "sources/homebrew/",
-      "hash": "sha256:4c05c8c20359c3d899405ab985f0c1e36c6a9fb7c9829bdc2c22c31cd7641cd4"
+      "hash": "sha256:eea764e006f98027866199e5822781b2489f1990bcdf781b51417d56898992ae"
     },
     {
       "id": "images",
@@ -196,7 +196,7 @@
       "bin": [],
       "readme": "sources/images/README.md",
       "path": "sources/images/",
-      "hash": "sha256:3c40c8efe1a9af2d966cfa8ad4e00ee62f9c2667ddd635dfbcc0a616afd12134"
+      "hash": "sha256:04347c4a4fd4180c96e9f871ebd3ad52dc5ff7b3de5331907a93179013096037"
     },
     {
       "id": "meeting",
@@ -209,7 +209,7 @@
       "bin": ["meeting-next"],
       "readme": "sources/meeting/README.md",
       "path": "sources/meeting/",
-      "hash": "sha256:f425f0ad724bd9a5a866aadc092f2d32619baf0ea4655614e45c56c96563811a"
+      "hash": "sha256:5685e7bede527529674d9f206eb39cb47b341fbc7c4160c7c0d372db6b48291d"
     },
     {
       "id": "niri",
@@ -222,7 +222,7 @@
       "bin": ["niri-wallpaper"],
       "readme": "sources/niri/README.md",
       "path": "sources/niri/",
-      "hash": "sha256:d5c5fa7ba681701539fb5a788cb707fffcb06b55dec94163c0f97dfc9e48bfcd"
+      "hash": "sha256:34543e0e8971e98b4baf8b136f15eee5ab7b1b911d70fc2979e022ced23c71aa"
     },
     {
       "id": "obsidian",
@@ -235,7 +235,7 @@
       "bin": ["note-preview"],
       "readme": "sources/obsidian/README.md",
       "path": "sources/obsidian/",
-      "hash": "sha256:f88db9b8e0a94cf65fc5d4a790665c379727d36c22b57c3608bc8fd6997a7230"
+      "hash": "sha256:d899141afe65348ed3a103ba874251ebaf5c223ee588f103577aa6bdfb15ea54"
     },
     {
       "id": "quicklinks",
@@ -248,7 +248,7 @@
       "bin": [],
       "readme": "sources/quicklinks/README.md",
       "path": "sources/quicklinks/",
-      "hash": "sha256:e626b7456f672fd2cb3bbc28bb7355de00acbdab44e7ad7ecf4ac66b97880d57"
+      "hash": "sha256:63f7d524db8e6a833522dad5842776ae4d3ec68965fe9a01c1483436e3ee1171"
     },
     {
       "id": "shortcuts",
@@ -257,11 +257,11 @@
       "platforms": ["macos"],
       "look": "0.6.12",
       "requires": [],
-      "files": ["shortcuts-folders.toml", "shortcuts.toml"],
+      "files": ["shortcuts.toml", "shortcuts-folders.toml"],
       "bin": [],
       "readme": "sources/shortcuts/README.md",
       "path": "sources/shortcuts/",
-      "hash": "sha256:8bc66581dd7d3138d52c5658d873eeb932dc23113dbb4e0e0fad43fd824b2827"
+      "hash": "sha256:16e01433b1c9dd30146a94901b8323f3c7371e8becdbd8ff37eecb08b7cc60e3"
     },
     {
       "id": "snippets",
@@ -274,7 +274,7 @@
       "bin": [],
       "readme": "sources/snippets/README.md",
       "path": "sources/snippets/",
-      "hash": "sha256:20b66952047b407aa881c3de035ea4c2d6b7787267a86e52ac03ac3332fa15e7"
+      "hash": "sha256:3510d3db3341a46270e97b06780435ae48952c5eed568dd1a78b8fdf0cc974e5"
     },
     {
       "id": "ssh",
@@ -287,7 +287,7 @@
       "bin": [],
       "readme": "sources/ssh/README.md",
       "path": "sources/ssh/",
-      "hash": "sha256:7e51bee0712139e82afb1c4a466557852b7d735e1eaeb24aec9ac5a8cffe83a7"
+      "hash": "sha256:52ac45d437e0014b503f00c716b7aa0441d6221829521081394fa58453afb981"
     },
     {
       "id": "systemd",
@@ -300,20 +300,20 @@
       "bin": [],
       "readme": "sources/systemd/README.md",
       "path": "sources/systemd/",
-      "hash": "sha256:3158f5b8e403e14cfcd70a2726931e4fdb4692f8e70f94d47c41016954f0cfce"
+      "hash": "sha256:f3e2da2ac6401c7e26f6bb8cad04ad098cb399f24528d27b8b4525b9c8b047da"
     },
     {
       "id": "timezone",
       "name": "Timezone",
       "description": "Timezone lookup and conversion from one typed line, offline, plus a live world clock.",
-      "platforms": ["macos"],
+      "platforms": ["macos", "linux", "windows"],
       "look": "0.7.5",
       "requires": ["python3"],
-      "files": ["timezone-clock.toml", "timezone.toml"],
-      "bin": ["timezone", "timezone-clock"],
+      "files": ["timezone.toml", "timezone-clock.toml", "timezone-clock-windows.toml", "timezone-windows.toml"],
+      "bin": ["timezone", "timezone-clock", "timezone-clock.py"],
       "readme": "sources/timezone/README.md",
       "path": "sources/timezone/",
-      "hash": "sha256:99e537e5a5779b1ae3c30967f2a08cd32e0121ec3d6d81a13d59f3b79852d2fe"
+      "hash": "sha256:199efc88446835a0dc10601186d59088d31c688006a176758cf18dade9acd08d"
     },
     {
       "id": "tmux",
@@ -326,7 +326,7 @@
       "bin": ["tmux-open"],
       "readme": "sources/tmux/README.md",
       "path": "sources/tmux/",
-      "hash": "sha256:c64899ab74c7da32486e5e8d359afb80c0b15b19097938dc9b19c889efce41f1"
+      "hash": "sha256:abe4ecb01b0f453ba9eb6a4400b17050f376a991f7c6159fed8a00fdb319e9ab"
     },
     {
       "id": "vscode",
@@ -339,7 +339,7 @@
       "bin": ["vscode-recents"],
       "readme": "sources/vscode/README.md",
       "path": "sources/vscode/",
-      "hash": "sha256:3136688289719a857422024aab4b42662fe04c1fd64e9076c543c4dc8a297f9c"
+      "hash": "sha256:7448b35b985ffb0a346d6881425cfcda61e4387baf6777ee57fe8749a0edfaa8"
     },
     {
       "id": "work-setup",
@@ -352,7 +352,7 @@
       "bin": [],
       "readme": "sources/work-setup/README.md",
       "path": "sources/work-setup/",
-      "hash": "sha256:7c9d057fde467b8b71c76ff6e24ea38a3c007ebae870112682ea11a82eeb80cb"
+      "hash": "sha256:7f65ac8cff52b1d8c4c39d4ab9edc5aee61405331f93694c042b4237d8dff83a"
     }
   ]
 }

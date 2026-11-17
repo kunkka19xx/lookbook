@@ -540,8 +540,69 @@ words = " ".join(sys.argv[2:]).split()
 if mode == "copy":
     copy_stdin()
     sys.exit(0)
+if mode == "clock":
+    import json
+    import threading
+    import time
+
+    default_zones = (
+        "America/Los_Angeles,America/New_York,Europe/London,Europe/Berlin,"
+        "Asia/Kolkata,Asia/Singapore,Asia/Tokyo,Australia/Sydney"
+    )
+    raw_zones = " ".join(words) if words else os.environ.get("LOOK_CLOCK_ZONES", default_zones)
+    zone_names = [z.strip() for z in raw_zones.replace(",", " ").split() if z.strip()]
+    poll_s = float(os.environ.get("LOOK_CLOCK_POLL", "5"))
+
+    def say(payload):
+        sys.stdout.write(json.dumps(payload) + "\n")
+        sys.stdout.flush()
+
+    known = []
+    for z in zone_names:
+        try:
+            known.append((z, ZoneInfo(z)))
+        except ZoneInfoNotFoundError:
+            say({"op": "error", "message": f'no timezone called "{z}"; skipping it'})
+
+    def watch_stdin():
+        try:
+            for raw in sys.stdin:
+                try:
+                    op = json.loads(raw).get("op")
+                except ValueError:
+                    continue
+                if op == "bye":
+                    os._exit(0)
+        except Exception:
+            pass
+        os._exit(0)
+
+    threading.Thread(target=watch_stdin, daemon=True).start()
+    say({"op": "ready", "capabilities": ["rows"]})
+
+    pushed = ""
+    local_tz = local_zone()[0]
+    while True:
+        now_key = datetime.now().strftime("%Y%m%d%H%M")
+        if now_key != pushed:
+            pushed = now_key
+            here = datetime.now(tz=local_tz)
+            rows = []
+            for name, tz in known:
+                moment = datetime.now(tz=tz)
+                abbr = abbr_of(moment) or offset_of(moment)
+                city = name.rsplit("/", 1)[-1].replace("_", " ")
+                rows.append({
+                    "id": name,
+                    "title": f"{city}  ·  {moment.strftime('%H:%M')} {abbr}",
+                    "subtitle": f"{gap(here, moment, 'you')} · {moment.strftime('%a %d %b')} · {name}",
+                })
+            if rows:
+                say({"op": "rows", "block": "timezone-clock", "rows": rows})
+        time.sleep(poll_s)
+
 if mode not in ("show", "line", "iso"):
-    die(f'no such mode: "{mode}"', "one of show, line, iso, copy")
+    die(f'no such mode: "{mode}"', "one of show, line, iso, copy, clock")
 
 if not words:
     # `tz` with nothing after it is a row like any other, and this is the

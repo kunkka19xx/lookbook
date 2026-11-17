@@ -42,12 +42,9 @@ listed under *Not yet* in [integrating.md](https://github.com/kunkka19xx/look/bl
 That part only core can do. This is the rest of it, today.
 
 **Requires.** Look v0.7.5 or newer (for `{arg}`, `scope` and `connect`),
-`python3` for the convert half, and `bash` with `jq` for the clock.
+`python3` for the convert half (plus `pip install tzdata` on Windows, which has no system zoneinfo database), and `bash` with `jq` for the clock on macOS/Linux.
 
-**Platforms.** macOS, where both halves were written and used. Nothing in
-either is macOS-specific by design — the clipboard is detected, the zone
-database is read at `/usr/share/zoneinfo`, which macOS symlinks — but Linux and
-Windows are untested.
+**Platforms.** macOS, and Windows. Both halves work across these platforms.
 
 ## Install
 
@@ -66,6 +63,36 @@ panel is the same panel `tz` gives you.
 
 Installing from `Settings > Extend` does all of it, and asks which cities the
 clock should show.
+
+## Windows
+
+On Windows, `cmd.exe` does not expand `~`, does not read `#!` shebangs, and cannot parse `VAR=... cmd` prefixes. Also install the IANA zone database once:
+
+```cmd
+pip install tzdata
+```
+
+Then, after copying the files to `%USERPROFILE%\.look\`, update the commands in the copied `.toml` files:
+
+### 1. Timezone Converter (`tz`)
+In `%USERPROFILE%\.look\sources\timezone.toml`:
+```toml
+preview = 'py %USERPROFILE%\.look\bin\timezone show {arg}'
+do      = ['py %USERPROFILE%\.look\bin\timezone line {arg} | py %USERPROFILE%\.look\bin\timezone copy']
+
+# for [timezone-iso]
+preview = 'py %USERPROFILE%\.look\bin\timezone iso {arg}'
+do      = ['py %USERPROFILE%\.look\bin\timezone iso {arg} | py %USERPROFILE%\.look\bin\timezone copy']
+```
+Clipboard copying automatically uses `clip.exe`.
+
+### 2. World Clock (`clock`)
+In `%USERPROFILE%\.look\sources\timezone-clock.toml`, use `bin/timezone`'s built-in `clock` mode with the cities passed as an argument (avoiding `bash`, which would boot WSL/`vmmemWSL`):
+```toml
+connect = 'py %USERPROFILE%\.look\bin\timezone clock America/Los_Angeles,America/New_York,Europe/London,Europe/Berlin,Asia/Kolkata,Asia/Singapore,Asia/Tokyo,Australia/Sydney'
+preview = 'py %USERPROFILE%\.look\bin\timezone show {id}'
+open    = 'py %USERPROFILE%\.look\bin\timezone line {id} | py %USERPROFILE%\.look\bin\timezone copy'
+```
 
 ## Blocks
 
