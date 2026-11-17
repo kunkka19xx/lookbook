@@ -1,0 +1,36 @@
+name: security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Weekly as well, for the one finding that can appear without a commit: an
+  # advisory published against an action this repo already pins.
+  schedule:
+    - cron: "23 4 * * 1"
+
+# Nothing by default; the job asks for what it reads.
+#
+# Every `uses:` in this repo is pinned to a commit, with the version as a
+# comment. A tag can be moved to different code after the fact, which is how a
+# compromised action reaches every workflow that trusted the tag; a commit
+# cannot. Dependabot moves the hash and the comment together.
+permissions: {}
+
+jobs:
+  scan:
+    name: scripts and workflows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The same script and the same pinned scanners as `make security` on a
+      # laptop. The token is the job's own, read-only; zizmor uses it to look
+      # the pinned actions up against GitHub's advisory database.
+      - run: make security
+        env:
+          GH_TOKEN: ${{ github.token }}

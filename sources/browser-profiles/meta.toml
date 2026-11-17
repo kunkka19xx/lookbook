@@ -1,0 +1,20 @@
+# What the catalog shows before you install this. `make index` reads it, and
+# `make check` fails when index.json no longer matches.
+#
+# Everything else in the entry is derived from the folder: which .toml files it
+# holds, which bin/ scripts, and a hash of both.
+
+name        = "Browser profiles"
+description = "Every browser profile as a row: Enter opens a window in it, with no profile picker and no flag to remember."
+
+# Where it works AS WRITTEN. Leave out a platform that needs a line changed
+# first: this is what decides whether it is offered to someone at all.
+platforms   = ["linux", "macos"]
+
+# The oldest Look that runs it. 0.6.13 if it uses `applies`.
+look        = "0.7.5"
+
+# Programs it cannot work without, as typed on a command line, so Look can say
+# "you do not have this" before installing. Per-verb extras that the rest works
+# without belong in the README instead.
+requires    = ["python3"]

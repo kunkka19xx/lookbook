@@ -6,7 +6,9 @@
 # these are not.
 #
 # The rows come from a script rather than a one-liner because it takes a jq
-# filter to shape them. See bin/docker-rows.
+# filter to shape them. See bin/docker-rows. Everything a row then does that is
+# more than one docker command is in bin/docker-do, including the one decision
+# that differs per machine: which terminal to open.
 
 [docker-containers]
 name    = "Containers"
@@ -15,30 +17,88 @@ run     = "~/.look/bin/docker-rows"
 format  = "json"
 timeout = "10s"
 
-aliases = ["docker", "ctr"]
+# `ldocker`, not `docker`: the bare tool name also finds Docker Desktop, every
+# Dockerfile and every folder with docker in its name. See CONTRIBUTING.
+aliases = ["ldocker", "ctr"]
 
-preview = "docker logs --tail 40 {id}"
-open    = "open -na Ghostty --args -e docker exec -it {id} sh"
-then    = ["docker-containers-stop", "docker-containers-restart"]
+# `ldocker pg` lists only the containers matching "pg", nothing else.
+scope = true
+
+# Status, ports, mounts and network, then the last 40 log lines.
+preview = "~/.look/bin/docker-do preview {id}"
+
+# A shell inside, in your terminal. On a stopped container it asks whether to
+# start it first, since there is nothing to exec into.
+open = "~/.look/bin/docker-do shell {id}"
+
+# Ordered by how often you reach for them, not by how dangerous they are: the
+# two that take something away each ask first.
+then = [
+  "docker-containers-logs",
+  "docker-containers-browser",
+  "docker-containers-start",
+  "docker-containers-restart",
+  "docker-containers-stop",
+  "docker-containers-copy",
+  "docker-containers-copy-id",
+  "docker-containers-remove",
+]
 
 
-[docker-containers-stop]
-name    = "Stop container"
-confirm = "Stop {title}?"
-do      = ["docker stop {id}"]
+[docker-containers-logs]
+name = "Follow logs"
+icon = "📜"
+do   = ["~/.look/bin/docker-do logs {id}"]
+
+
+# localhost on the first port the container publishes. Says so, rather than
+# opening a dead tab, when it publishes none.
+[docker-containers-browser]
+name = "Open in browser"
+icon = "🌐"
+do   = ["~/.look/bin/docker-do browser {id}"]
+
+
+# No `confirm`: starting something that is not running breaks nothing.
+[docker-containers-start]
+name = "Start container"
+icon = "▶️"
+do   = ["docker start {id}"]
 
 
 [docker-containers-restart]
 name    = "Restart container"
+icon    = "🔄"
 confirm = "Restart {title}?"
 do      = ["docker restart {id}"]
 
-# Asked by the installer, so Enter opens your terminal rather than the author's.
-[[setup]]
-label = "Your terminal"
-type  = "choice"
-block = "docker-containers"
-key   = "open"
-match = "Ghostty"
-options = ["Ghostty", "Alacritty", "kitty", "WezTerm", "iTerm", "Terminal"]
-note  = "Opened with `open -na`, so it is the app name as it appears in /Applications."
+
+[docker-containers-stop]
+name    = "Stop container"
+icon    = "⏹️"
+confirm = "Stop {title}?"
+do      = ["docker stop {id}"]
+
+
+# For the moment you do need the CLI after all.
+[docker-containers-copy]
+name = "Copy name"
+icon = "📋"
+do   = ["~/.look/bin/docker-do copy {id}"]
+
+
+# The short id, for matching a container against something that only knows it
+# by that: its own hostname, a log line, a monitoring graph.
+[docker-containers-copy-id]
+name = "Copy ID"
+icon = "🆔"
+do   = ["~/.look/bin/docker-do copy-id {id}"]
+
+
+# Plain `rm`, never `rm -f`: Docker refuses a running container, so the worst
+# this does to one you picked by mistake is nothing. Named volumes survive.
+[docker-containers-remove]
+name    = "Remove container"
+icon    = "🗑️"
+confirm = "Remove {title}? Anything it wrote outside a volume goes with it."
+do      = ["docker rm {id}"]

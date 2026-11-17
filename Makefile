@@ -8,7 +8,7 @@ LAYOUT_FILE ?= $(HOME)/.look/super-actions.toml
 SOURCE_NAMES := $(notdir $(wildcard sources/*))
 TILE_NAMES   := $(filter-out README.md,$(notdir $(wildcard tiles/*)))
 
-.PHONY: help new new-tile check index install uninstall show list
+.PHONY: help new new-tile check security index install uninstall show list
 
 help:
 	@echo "lookbook"
@@ -28,6 +28,7 @@ help:
 	@echo "  make index               rebuild index.json, the catalog Look reads"
 	@echo "  make check               check everything against CONTRIBUTING"
 	@echo "  make check NAME=tmux     check just that one"
+	@echo "  make security            scan the scripts and workflows"
 	@echo "  make list                what is in here"
 	@echo
 	@echo "Reload Look after either: Cmd+Shift+; (macOS), Ctrl+Shift+; (Linux, Windows)"
@@ -42,6 +43,12 @@ new-tile:
 # Reads. Never runs your commands, so install it and use it before committing.
 check:
 	@./scripts/check.sh $(NAME)
+
+# shellcheck, bandit and zizmor, at the versions pinned in
+# scripts/security/requirements.txt. Installs them into .security-tools/ the
+# first time; like check, it reads and never runs anything it scans.
+security:
+	@./scripts/security.sh
 
 # The catalog Look lists these from. Regenerate after adding or editing a
 # source; `make check` fails when it is stale.

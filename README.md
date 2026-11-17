@@ -2,6 +2,8 @@
 
 Ready-made **sources** and **tiles** for [Look](https://github.com/kunkka19xx/look).
 
+Made one, want one, or stuck on one? Bring it to `#lookbook-share` on the [Look Discord](https://discord.gg/vJSpNpeFBn).
+
 Two kinds, because Look reads two files, and which one a thing goes into decides how you install it:
 
 | | What it is | Lives in | Installed by |
@@ -47,7 +49,7 @@ flowchart LR
 
 Five things the picture leaves out:
 
-- **A file holds as many blocks as you like**, one producer each. `sources/docker` is one file with three: a `run` block listing containers, and two `do` blocks it reaches with `then`.
+- **A file holds as many blocks as you like**, one producer each. `sources/docker/docker-containers.toml` is one file with eight: a `run` block listing containers, and seven `do` blocks it reaches with `then`.
 - **A path row can do more than a text row.** `dir` rows are real filesystem objects, so `{path}`, `Cmd+E`, `Cmd+T` and `Cmd+F` work and Enter opens the folder with no `open` declared. `file` and `run` rows are text: give them an `open`, or `format = "json"` to carry a path and a per-row icon.
 - **Every step is shell text**, run through your login shell (`$SHELL -lc`, or `cmd /D /S /C` on Windows), so `&&`, `|`, `>`, `$VAR` and globs work. That is a *non-interactive* shell: it never reads `~/.zshrc`, so a `PATH` entry or alias living there is missing, move it to `~/.zshenv`, or name the binary in full. fish and nu are passed over for `/bin/sh`. A script can read `LOOK_ID`, `LOOK_TITLE` and `LOOK_PATH` instead of taking arguments.
 - **A producer that names a placeholder is not a top-level row.** `run = "git -C {path} branch"` means nothing with no project selected, so Look indexes it only as another block's `then` target. The producer is the `do` / `dir` / `file` / `run` line **and its `cwd`**; `open`, `preview` and the other verbs do not count, because those already act on a row the block produced.
@@ -83,7 +85,7 @@ The five that catch people:
 
 - **A name or alias that is already busy on your machine.** This one is silent and easy to miss. A block's `name` and `aliases` are what you type to reach its rows, and they compete with everything Look already indexes: your apps, files, folders, settings and history. `dev-projects` ships `aliases = ["repo", "git", "code"]`, and on a machine with a `~/code` folder or VS Code installed, typing `code` now returns a mixture. Nothing is broken and nothing is reported; the list is just muddier than it was. Prefer a word that is distinctive on **your** machine, and reach for `bias` only when you want a generic word anyway. See [Choosing what to type](#choosing-what-to-type) below.
 - **A path that is not yours.** `dev-projects` lists `~/dev`. If your repos are in `~/code` or `~/work`, you get an empty list and nothing else.
-- **An app you do not have.** `ssh` and `docker` open Ghostty, `homebrew` upgrades in it, `tmux` attaches with WezTerm, `work-setup` opens Slack, Ghostty and Safari, `dev-projects` edits with `code`.
+- **An app you do not have.** `ssh` opens Ghostty, `homebrew` upgrades in it, `tmux` attaches with WezTerm, `work-setup` opens Slack, Ghostty and Safari, `dev-projects` edits with `code`.
 - **`open`, which is macOS.** On Linux that is `xdg-open`, on Windows `start ""`. Most of these were tested on macOS only; the table below says which.
 - **A file that has to be there.** `ssh` reads your `~/.ssh/config`. Anything shipping a `bin/` script needs that script in `~/.look/bin/` first, which its README tells you.
 
@@ -119,7 +121,7 @@ The **Platforms** column is what the author tested, not what might work. Where a
 | [dev-projects](sources/dev-projects) | none       | `dir`: rows from a directory, custom verbs                    | macOS, Linux, Windows |
 | [ssh](sources/ssh)                   | ssh        | `run`: rows from a command, and the `file` alternative        | macOS                 |
 | [git](sources/git)                   | git        | two files in one folder; drill-downs, `confirm`, `{parent.*}` | macOS, Linux, Windows |
-| [docker](sources/docker)             | docker, jq | `format = "json"`, per-row icons, a helper script             | macOS                 |
+| [docker](sources/docker)             | docker, jq | `format = "json"`, per-row icons, a laid-out preview, a shared drill-down, bulk deletes that preview before they ask | Linux; macOS not re-run |
 | [tmux](sources/tmux)                 | tmux       | a `bin/` script doing real work; session per project          | macOS                 |
 | [browser-history](sources/browser-history) | sqlite3    | `run` + `format = "json"`: favicons as per-row icons, browsers picked by env var | Linux, macOS          |
 | [close-windows](sources/close-windows) | jq (Linux) | a multi-line `do` step; `confirm` on something irreversible; one file per OS | Linux (sway; more untested), macOS |
@@ -135,13 +137,14 @@ The **Platforms** column is what the author tested, not what might work. Where a
 | [downloads-live](sources/downloads-live) | bash, jq | `connect`: a program that stays running and pushes rows, and fills the preview | macOS, Linux |
 | [vscode](sources/vscode)             | python3    | `run` + `format = "json"`: an editor's own recent list, rows that are real folders | macOS                 |
 | [github](sources/github)             | gh, jq     | four network lists in one file; `preview` as a CI check; shared `then` actions | macOS, Linux          |
-| [quicklinks](sources/quicklinks)     | none       | `{arg}` and `{arg:url}`: ten blocks you type into, no tool at all | macOS                 |
+| [quicklinks](sources/quicklinks)     | none       | `{arg}` and `{arg:url}`: ten blocks you type into, no tool at all | macOS, Linux, Windows |
 | [snippets](sources/snippets)         | none       | `dir` whose Enter copies instead of opening; `{arg}` writing a new file | macOS                 |
 | [devutils](sources/devutils)         | jq, python3 | `preview` showing the exact answer before Enter copies it | macOS, Linux          |
 | [emoji](sources/emoji)               | python3    | 1,800 rows generated from Unicode itself; the clearest case for `scope` | macOS                 |
 | [browser-bookmarks](sources/browser-bookmarks) | python3 | two bookmark stores read as one list; favicons borrowed from another source's cache | macOS |
 | [timezone](sources/timezone)         | python3, jq | `{arg}` and `connect` in one folder: a converter you type into, a clock that stays current | macOS                 |
 | [convert](sources/convert)           | python3    | one `{arg}` block over a table the user extends; a rules file as the second block | macOS                 |
+| [browser-profiles](sources/browser-profiles) | python3 | one script for rows, preview and every action; a level other sources can borrow with `then` | Linux (sway); macOS untested |
 <!-- /index:sources -->
 
 ## The tiles
@@ -167,6 +170,8 @@ Most of them touch only what you point them at. One does not, on purpose: [brows
 ## Contributing
 
 Yes please. `make new NAME=tmux` scaffolds one with every rename already done. One folder per example, [the rules are short](CONTRIBUTING.md), and CI parses every file with Look's own parser so a typo cannot reach anyone. Two things we ask beyond that: **install it and use it before you commit** (parsing is not running), and **say which platforms you actually tested on**.
+
+Not ready for a PR yet? Post it in `#lookbook-share` on [Discord](https://discord.gg/vJSpNpeFBn) first. Someone on another platform can try it, which is how a macOS-only example picks up its Linux and Windows lines.
 
 **AI-assisted contributions are welcome.** How it was written does not matter; what we review is whether it is **useful** to someone besides you, **well documented** (a README with its **Requires** and **Platforms** lines and a **Customise** section), and **tested** by installing it in Look and using it. You are the author either way, so read every line before you open the PR and be ready to answer for it.
 

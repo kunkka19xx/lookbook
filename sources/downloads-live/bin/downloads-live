@@ -18,7 +18,10 @@ readonly LIMIT=50
 # shell is how a connector ends up sending a frame Look cannot read.
 say() { jq -cn "$@"; }
 
-# Newest first, capped. `ls -t` is the mtime order on both GNU and macOS.
+# Newest first, capped. `ls -t` is the mtime order on both GNU and macOS;
+# find has no way to sort by mtime that both of them spell the same. The cost
+# is a name with a newline in it, which arrives as two rows.
+# shellcheck disable=SC2012
 listing() { ls -t "$DIR" 2>/dev/null | head -n "$LIMIT"; }
 
 rows_json() {
@@ -64,6 +67,11 @@ preview() {
     text="$(
         printf '# %s\n\n' "$(basename "$id")"
         if [ -e "$id" ]; then
+            # The size and date of one file, for reading: `stat` spells
+            # this differently on GNU and macOS, and `ls -lh` does not.
+            # No apostrophes in these comments: bash 3.2 reads one inside a
+            # command substitution as an opening quote.
+            # shellcheck disable=SC2012
             printf '%s\n\n' "$(ls -lh "$id" | awk '{print $5, "  ", $6, $7, $8}')"
             file -b "$id" 2>/dev/null
         else

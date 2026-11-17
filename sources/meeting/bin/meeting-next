@@ -304,7 +304,8 @@ case "${1:-}" in
                 next_title="${next_title:0:25}…"
             fi
             printf '\n'
-            field then "$when  $next_title"
+            # Quoted only so shellcheck does not read the label as the keyword.
+            field "then" "$when  $next_title"
         fi
         ;;
 

@@ -20,6 +20,7 @@ That copies the right template, renames the folder, the file, the ids and the di
 make install NAME=tmux    # a source: copy it into ~/.look/sources and try it for real
 make show NAME=disk       # a tile: print the block to paste, and where
 make check                # parse it the way Look would
+make security             # scan its scripts for careless shell and Python
 make uninstall NAME=tmux
 ```
 
@@ -58,6 +59,15 @@ aliases = ["tm"]                             # good: short, means nothing else
 name    = "Files"                            # NO: an app on macOS and GNOME
 aliases = ["code", "git", "notes", "open"]   # NO: an editor, a directory, a folder, a verb
 ```
+
+**Never claim a tool's own name; prefix it with `l`.** `docker`, `git`, `tmux`, `code`: the word a source is about is exactly the word the user's machine is already full of. There is an app called that, a folder called that, and a dozen files with it in their name, so an alias of `docker` buries the rows it was meant to find. The alias for a source about a tool is `l` (for Look) + the tool:
+
+```toml
+aliases = ["ldocker"]                     # good: finds this block and nothing else
+aliases = ["docker"]                         # NO: also Docker Desktop, every Dockerfile, ~/dev/docker-stuff
+```
+
+It is one extra letter and never ambiguous, and it is the same shape for every source, so nobody has to remember what each one chose.
 
 Ask what the word already means on a normal machine before you claim it. Most blocks need no alias at all. Do not paper over a generic name with `bias` either: that shifts the whole block in *every* query, and it is the user's call rather than yours.
 
@@ -237,3 +247,15 @@ LOOK_REF=main make check
 Two things it can never check, and they are the two that catch the most: **that you installed it and used it**, and **that a command only one OS understands is labelled as such**. Neither is decidable from the text, so both stay yours.
 
 It is the floor, not the bar. It reads your file; it never runs your commands. The [walkthrough above](#test-it-in-look-before-you-commit) is the part that catches a source that parses beautifully and does nothing.
+
+### Then scan it
+
+```bash
+make security
+```
+
+The other half, for anything with a `bin/` script. It runs shellcheck over every shell script, bandit over every Python one, and zizmor over the workflows, at the versions pinned in `scripts/security/requirements.txt`, which it installs into `.security-tools/` the first time. CI runs the same script on every PR, and weekly.
+
+What it catches is carelessness: an unquoted `$name` that a file called `Q3 report.pdf` splits into two arguments, `rm -rf "$dir/"*` with an empty `$dir`, `shell=True` on a string built from a row. What it cannot catch is intent. A script that uploads your notes on purpose is clean to every scanner here, which is why a `bin/` script gets read line by line in review, and why yours should be short enough to read.
+
+A finding you disagree with is silenced where it happens, with the reason above it (see the two `# shellcheck disable=SC2012` lines in `downloads-live`), never by turning the check off for the whole repo.

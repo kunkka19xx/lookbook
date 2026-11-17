@@ -56,6 +56,19 @@
       "hash": "sha256:c59ca34a05097092bbb34cabbffd9c2bb06bb9031c991b67cd4ec0fbab0963dc"
     },
     {
+      "id": "browser-profiles",
+      "name": "Browser profiles",
+      "description": "Every browser profile as a row: Enter opens a window in it, with no profile picker and no flag to remember.",
+      "platforms": ["linux", "macos"],
+      "look": "0.7.5",
+      "requires": ["python3"],
+      "files": ["browser-profiles.toml"],
+      "bin": ["browser-profiles"],
+      "readme": "sources/browser-profiles/README.md",
+      "path": "sources/browser-profiles/",
+      "hash": "sha256:ad1792098d5688c160782d17b297ac0293b957221504b4483e2c9e088399ee31"
+    },
+    {
       "id": "close-windows",
       "name": "Close windows",
       "description": "One row that ends the day: everything you have open goes away.",
@@ -110,15 +123,15 @@
     {
       "id": "docker",
       "name": "Docker containers",
-      "description": "Every container as a row, with status, logs in the preview, and a shell on Enter.",
-      "platforms": ["macos"],
-      "look": "0.6.12",
-      "requires": ["docker", "jq"],
-      "files": ["docker-containers.toml"],
-      "bin": ["docker-rows"],
+      "description": "Containers, Compose projects and images as rows: status and ports at a glance, logs in the preview, a shell on Enter, and guarded prunes.",
+      "platforms": ["linux", "macos"],
+      "look": "0.7.5",
+      "requires": ["docker", "jq", "bash"],
+      "files": ["docker-cleanup.toml", "docker-compose.toml", "docker-containers.toml", "docker-images.toml"],
+      "bin": ["docker-do", "docker-rows"],
       "readme": "sources/docker/README.md",
       "path": "sources/docker/",
-      "hash": "sha256:2c2c50110201d93df5423235d569d4ae341ddc671fd20d8bc6bb6cfe7c2b5da4"
+      "hash": "sha256:cc3c4528aaf3294647197ab0a3ae34356e2280a47a379754decaee03d3bad8b0"
     },
     {
       "id": "downloads-live",
@@ -131,7 +144,7 @@
       "bin": ["downloads-live"],
       "readme": "sources/downloads-live/README.md",
       "path": "sources/downloads-live/",
-      "hash": "sha256:b805e6804163fdcd51d7b3a9e33063c641114649061f0211af76174e08ed4254"
+      "hash": "sha256:c7c50cf4534912e37c5be524d7aacd0e7215806c55ef85b73d48183c3586f939"
     },
     {
       "id": "emoji",
@@ -209,7 +222,7 @@
       "bin": ["meeting-next"],
       "readme": "sources/meeting/README.md",
       "path": "sources/meeting/",
-      "hash": "sha256:5685e7bede527529674d9f206eb39cb47b341fbc7c4160c7c0d372db6b48291d"
+      "hash": "sha256:1166edfd28ef69983a7396d5e513cbd93ba279f118c492b7d18d1f0ca3da534a"
     },
     {
       "id": "niri",
@@ -241,14 +254,14 @@
       "id": "quicklinks",
       "name": "Quicklinks",
       "description": "Ten searches you can type into: GitHub, npm, MDN, Stack Overflow, Maps and more.",
-      "platforms": ["macos"],
+      "platforms": ["macos", "linux", "windows"],
       "look": "0.7.5",
       "requires": [],
       "files": ["quicklinks.toml"],
       "bin": [],
       "readme": "sources/quicklinks/README.md",
       "path": "sources/quicklinks/",
-      "hash": "sha256:63f7d524db8e6a833522dad5842776ae4d3ec68965fe9a01c1483436e3ee1171"
+      "hash": "sha256:321afb7def250d78b337649c88fa7318f821e625db0475d129e6a5bd3534e4af"
     },
     {
       "id": "shortcuts",

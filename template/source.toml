@@ -17,7 +17,8 @@ icon = "📦"                        # emoji, SF Symbol name, or an image path
 dir  = "~/Documents"               # the producer. Swap for do / file / run
 only = "dirs"                      # dirs | files | all
 
-# aliases = ["short", "other"]     # extra words that find these rows
+# aliases = ["ltemplate"]       # extra words that find these rows. Never the
+#                                  # tool's bare name: `ldocker`, not `docker`
 # bias    = -5                     # score offset: negative sits below apps
 
 # What the standard keys do to a picked row. Declare only what differs from the
