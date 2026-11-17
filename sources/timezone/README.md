@@ -130,6 +130,10 @@ zone names at all, and nicknames like `nyc`, `sf` and `bangalore`.
 today in New York, which may already be yesterday or tomorrow where you are;
 that is what the `+1 day` marker and the `from` line are for.
 
+Sample demo:
+
+<img width="890" height="610" alt="timezone-ezgif com-gif-maker" src="https://github.com/user-attachments/assets/c7ea2c4c-e70a-46a8-b7fa-c7017f71518f" />
+
 ## The three things it is careful about
 
 **An abbreviation is not a zone.** `JST` names an offset; `Asia/Tokyo` names a
