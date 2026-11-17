@@ -326,7 +326,7 @@
       "bin": ["timezone", "timezone-clock"],
       "readme": "sources/timezone/README.md",
       "path": "sources/timezone/",
-      "hash": "sha256:99e537e5a5779b1ae3c30967f2a08cd32e0121ec3d6d81a13d59f3b79852d2fe"
+      "hash": "sha256:a7decd42fd9ab3c1d42092fa27ad33f135984c86accc0178baae044a2cdf8ce5"
     },
     {
       "id": "tmux",

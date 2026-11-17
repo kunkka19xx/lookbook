@@ -42,12 +42,15 @@ listed under *Not yet* in [integrating.md](https://github.com/kunkka19xx/look/bl
 That part only core can do. This is the rest of it, today.
 
 **Requires.** Look v0.7.5 or newer (for `{arg}`, `scope` and `connect`),
-`python3` for the convert half, and `bash` with `jq` for the clock.
+`python3` for the convert half, and `bash` with `jq` for the clock. On Windows
+the clock needs neither, only Python, plus `pip install tzdata` because Windows
+ships no zone database for `zoneinfo` to read.
 
-**Platforms.** macOS, where both halves were written and used. Nothing in
-either is macOS-specific by design — the clipboard is detected, the zone
-database is read at `/usr/share/zoneinfo`, which macOS symlinks — but Linux and
-Windows are untested.
+**Platforms.** macOS as written. Windows after rewriting the commands, which
+the [Windows](#windows) section gives in full: the files as shipped do not run
+there. Untested on Linux, though nothing in either half is macOS-specific by
+design: the clipboard is detected, and the zone database is read at
+`/usr/share/zoneinfo`, which macOS symlinks.
 
 ## Install
 
@@ -66,6 +69,50 @@ panel is the same panel `tz` gives you.
 
 Installing from `Settings > Extend` does all of it, and asks which cities the
 clock should show.
+
+## Windows
+
+The files as shipped are written for a POSIX shell, and `cmd.exe` is not one:
+it does not expand `~`, does not read a `#!` line, and has no `VAR=... command`
+prefix. So on Windows, install the IANA zone database once, since the system
+has none:
+
+```cmd
+pip install tzdata
+```
+
+Copy the two `.toml` files to `%USERPROFILE%\.look\sources\` and `bin\timezone`
+to `%USERPROFILE%\.look\bin\`, then replace these lines in the copies. The
+quotes around the path are what keep a profile folder with a space in it
+(`C:\Users\John Smith`) in one piece.
+
+In `timezone.toml`:
+
+```toml
+[timezone-convert]
+preview = 'py "%USERPROFILE%\.look\bin\timezone" show {arg}'
+do      = ['py "%USERPROFILE%\.look\bin\timezone" line {arg} | py "%USERPROFILE%\.look\bin\timezone" copy']
+
+[timezone-iso]
+preview = 'py "%USERPROFILE%\.look\bin\timezone" iso {arg}'
+do      = ['py "%USERPROFILE%\.look\bin\timezone" iso {arg} | py "%USERPROFILE%\.look\bin\timezone" copy']
+```
+
+The clipboard needs nothing: `clip.exe` is one of the tools the script tries.
+
+In `timezone-clock.toml`:
+
+```toml
+connect = 'py "%USERPROFILE%\.look\bin\timezone" clock America/Los_Angeles,America/New_York,Europe/London,Europe/Berlin,Asia/Kolkata,Asia/Singapore,Asia/Tokyo,Australia/Sydney'
+preview = 'py "%USERPROFILE%\.look\bin\timezone" show {id}'
+open    = 'py "%USERPROFILE%\.look\bin\timezone" line {id} | py "%USERPROFILE%\.look\bin\timezone" copy'
+```
+
+`timezone clock` is the same connector as `bin/timezone-clock`, written in
+Python so that it needs no `bash` and no `jq`; on Windows `bash` is WSL, and
+starting it boots a virtual machine to tell the time. The cities are arguments
+here rather than `LOOK_CLOCK_ZONES`, because `cmd.exe` cannot set a variable
+in front of a command. `bin\timezone-clock` is not needed at all.
 
 ## Blocks
 
@@ -102,6 +149,10 @@ zone names at all, and nicknames like `nyc`, `sf` and `bangalore`.
 **A time with no date means today in the source zone.** `tz 3pm est` is 3pm
 today in New York, which may already be yesterday or tomorrow where you are;
 that is what the `+1 day` marker and the `from` line are for.
+
+Sample demo:
+
+<img width="890" height="610" alt="timezone-ezgif com-gif-maker" src="https://github.com/user-attachments/assets/c7ea2c4c-e70a-46a8-b7fa-c7017f71518f" />
 
 ## The three things it is careful about
 
@@ -155,7 +206,7 @@ seconds.
 
 - **The cities**: the `LOOK_CLOCK_ZONES` list on the `connect` line, comma
   separated IANA names, in the order you want to read them. The installer asks
-  for this.
+  for this. On Windows they are the arguments after `timezone clock`.
 - **24-hour clocks everywhere**: `LOOK_TZ_24H=1` in front of the commands in
   `timezone.toml`. The clock half is 24-hour already.
 - **A home zone that is not the machine's**, for a laptop that travels:

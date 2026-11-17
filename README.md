@@ -61,6 +61,8 @@ In a real file: `[dev-projects]` is the block, `dir = "~/dev"` is the producer t
 
 A **source** installs from inside Look: open `Settings > Extend` and choose **Browse lookbook**. Each card says whether the source works on your platform and which programs it needs that you do not have, and its name opens the README. **Install** shows the declaration before anything is written and asks for any values the example needs (a folder, a terminal, an app). The `.toml` lands in `~/.look/sources/`, a helper script in `~/.look/bin/`, and Look reloads by itself. A source you already have reads **Reconfigure**. Look fetches the catalog only while that tab is open, never on launch.
 
+> **Where to edit values:** To change any property after installing (such as `dir`, `connect`, `open`, or `do`), edit `~/.look/sources/<name>.toml` (on Windows: `%USERPROFILE%\.look\sources\<name>.toml`) and reload Look with `Cmd+Shift+;` (macOS) or `Ctrl+Shift+;` (Linux, Windows).
+
 Or copy it in by hand:
 
 ```bash
