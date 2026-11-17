@@ -25,8 +25,9 @@ aliases = ["clock"]
 # to these rows. Without it the cities still rank normally in a plain search.
 scope = true
 
-# `~` is expanded by your shell, as in any other command. On Windows write
-# %USERPROFILE%\.look\bin\timezone-clock instead: cmd has no tilde expansion.
+# `~` is expanded by your shell, as in any other command. Windows has neither
+# the tilde nor bash: the README's Windows section has the line to use there,
+# which runs the same connector out of bin/timezone instead.
 #
 # The cities are set here rather than exported from your shell rc, because Look
 # runs commands through a LOGIN shell, which never reads ~/.zshrc or ~/.bashrc.

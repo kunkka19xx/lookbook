@@ -42,9 +42,15 @@ listed under *Not yet* in [integrating.md](https://github.com/kunkka19xx/look/bl
 That part only core can do. This is the rest of it, today.
 
 **Requires.** Look v0.7.5 or newer (for `{arg}`, `scope` and `connect`),
-`python3` for the convert half (plus `pip install tzdata` on Windows, which has no system zoneinfo database), and `bash` with `jq` for the clock on macOS/Linux.
+`python3` for the convert half, and `bash` with `jq` for the clock. On Windows
+the clock needs neither, only Python, plus `pip install tzdata` because Windows
+ships no zone database for `zoneinfo` to read.
 
-**Platforms.** macOS, and Windows. Both halves work across these platforms.
+**Platforms.** macOS as written. Windows after rewriting the commands, which
+the [Windows](#windows) section gives in full: the files as shipped do not run
+there. Untested on Linux, though nothing in either half is macOS-specific by
+design: the clipboard is detected, and the zone database is read at
+`/usr/share/zoneinfo`, which macOS symlinks.
 
 ## Install
 
@@ -66,33 +72,47 @@ clock should show.
 
 ## Windows
 
-On Windows, `cmd.exe` does not expand `~`, does not read `#!` shebangs, and cannot parse `VAR=... cmd` prefixes. Also install the IANA zone database once:
+The files as shipped are written for a POSIX shell, and `cmd.exe` is not one:
+it does not expand `~`, does not read a `#!` line, and has no `VAR=... command`
+prefix. So on Windows, install the IANA zone database once, since the system
+has none:
 
 ```cmd
 pip install tzdata
 ```
 
-Then, after copying the files to `%USERPROFILE%\.look\`, update the commands in the copied `.toml` files:
+Copy the two `.toml` files to `%USERPROFILE%\.look\sources\` and `bin\timezone`
+to `%USERPROFILE%\.look\bin\`, then replace these lines in the copies. The
+quotes around the path are what keep a profile folder with a space in it
+(`C:\Users\John Smith`) in one piece.
 
-### 1. Timezone Converter (`tz`)
-In `%USERPROFILE%\.look\sources\timezone.toml`:
+In `timezone.toml`:
+
 ```toml
-preview = 'py %USERPROFILE%\.look\bin\timezone show {arg}'
-do      = ['py %USERPROFILE%\.look\bin\timezone line {arg} | py %USERPROFILE%\.look\bin\timezone copy']
+[timezone-convert]
+preview = 'py "%USERPROFILE%\.look\bin\timezone" show {arg}'
+do      = ['py "%USERPROFILE%\.look\bin\timezone" line {arg} | py "%USERPROFILE%\.look\bin\timezone" copy']
 
-# for [timezone-iso]
-preview = 'py %USERPROFILE%\.look\bin\timezone iso {arg}'
-do      = ['py %USERPROFILE%\.look\bin\timezone iso {arg} | py %USERPROFILE%\.look\bin\timezone copy']
+[timezone-iso]
+preview = 'py "%USERPROFILE%\.look\bin\timezone" iso {arg}'
+do      = ['py "%USERPROFILE%\.look\bin\timezone" iso {arg} | py "%USERPROFILE%\.look\bin\timezone" copy']
 ```
-Clipboard copying automatically uses `clip.exe`.
 
-### 2. World Clock (`clock`)
-In `%USERPROFILE%\.look\sources\timezone-clock.toml`, use `bin/timezone`'s built-in `clock` mode with the cities passed as an argument (avoiding `bash`, which would boot WSL/`vmmemWSL`):
+The clipboard needs nothing: `clip.exe` is one of the tools the script tries.
+
+In `timezone-clock.toml`:
+
 ```toml
-connect = 'py %USERPROFILE%\.look\bin\timezone clock America/Los_Angeles,America/New_York,Europe/London,Europe/Berlin,Asia/Kolkata,Asia/Singapore,Asia/Tokyo,Australia/Sydney'
-preview = 'py %USERPROFILE%\.look\bin\timezone show {id}'
-open    = 'py %USERPROFILE%\.look\bin\timezone line {id} | py %USERPROFILE%\.look\bin\timezone copy'
+connect = 'py "%USERPROFILE%\.look\bin\timezone" clock America/Los_Angeles,America/New_York,Europe/London,Europe/Berlin,Asia/Kolkata,Asia/Singapore,Asia/Tokyo,Australia/Sydney'
+preview = 'py "%USERPROFILE%\.look\bin\timezone" show {id}'
+open    = 'py "%USERPROFILE%\.look\bin\timezone" line {id} | py "%USERPROFILE%\.look\bin\timezone" copy'
 ```
+
+`timezone clock` is the same connector as `bin/timezone-clock`, written in
+Python so that it needs no `bash` and no `jq`; on Windows `bash` is WSL, and
+starting it boots a virtual machine to tell the time. The cities are arguments
+here rather than `LOOK_CLOCK_ZONES`, because `cmd.exe` cannot set a variable
+in front of a command. `bin\timezone-clock` is not needed at all.
 
 ## Blocks
 
@@ -186,7 +206,7 @@ seconds.
 
 - **The cities**: the `LOOK_CLOCK_ZONES` list on the `connect` line, comma
   separated IANA names, in the order you want to read them. The installer asks
-  for this.
+  for this. On Windows they are the arguments after `timezone clock`.
 - **24-hour clocks everywhere**: `LOOK_TZ_24H=1` in front of the commands in
   `timezone.toml`. The clock half is 24-hour already.
 - **A home zone that is not the machine's**, for a laptop that travels:

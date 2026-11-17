@@ -8,6 +8,11 @@ Declared by ~/.look/sources/timezone.toml.
     timezone line 3pm cet to jst      the one line Enter copies
     timezone iso  3pm cet to jst      the same instant as ISO 8601
     timezone copy                     stdin onto the clipboard
+    timezone clock [zones]            a connector: the world clock, without bash
+
+`clock` is the same connector as bin/timezone-clock, for a machine with no
+bash and no jq, which in practice means Windows. timezone-clock.toml uses the
+bash one as written; the README's Windows section says how to switch.
 
 Everything comes from the IANA database the operating system already ships,
 through Python's own `zoneinfo`. Nothing is downloaded, nothing is embedded
@@ -531,6 +536,15 @@ def copy_stdin():
 
 MODE = mode = sys.argv[1] if len(sys.argv) > 1 else ""
 
+# Look reads a command's output as UTF-8. Python writes a pipe in the locale's
+# encoding instead, which on Windows is a legacy code page: the `·` in a panel
+# would arrive as a byte that is not UTF-8 at all, or fail to encode entirely.
+for stream in (sys.stdout, sys.stderr):
+    try:
+        stream.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
+
 # Look shell-escapes a substitution, so `timezone show {arg}` arrives as ONE
 # argument holding the whole line - while the same command typed in a terminal
 # arrives as several. Joining and re-splitting is what makes both work, and is
@@ -541,6 +555,9 @@ if mode == "copy":
     copy_stdin()
     sys.exit(0)
 if mode == "clock":
+    # The connector bin/timezone-clock is, for a machine with no bash and no
+    # jq. Same frames, same rows, same block id, so the two are interchangeable
+    # on the `connect` line. Keep the default cities the same as that script's.
     import json
     import threading
     import time
@@ -549,27 +566,45 @@ if mode == "clock":
         "America/Los_Angeles,America/New_York,Europe/London,Europe/Berlin,"
         "Asia/Kolkata,Asia/Singapore,Asia/Tokyo,Australia/Sydney"
     )
+    # As arguments, because cmd.exe has no `VAR=... command` prefix to set
+    # them with. The variable still works where the shell has one.
     raw_zones = " ".join(words) if words else os.environ.get("LOOK_CLOCK_ZONES", default_zones)
     zone_names = [z.strip() for z in raw_zones.replace(",", " ").split() if z.strip()]
-    poll_s = float(os.environ.get("LOOK_CLOCK_POLL", "5"))
+
+    # How often to look at the clock, not how often it pushes. Anything that
+    # is not a positive number falls back, because zero would spin a core and
+    # a negative one would kill the connector on its first sleep.
+    try:
+        poll_s = float(os.environ.get("LOOK_CLOCK_POLL", "5"))
+    except ValueError:
+        poll_s = 5.0
+    if not 0 < poll_s <= 60:
+        poll_s = 5.0
 
     def say(payload):
         sys.stdout.write(json.dumps(payload) + "\n")
         sys.stdout.flush()
 
+    # Checked once, not per push: the list cannot change while this runs, and
+    # an error frame per minute for one typo would fill Look's log. ValueError
+    # as well, which is what zoneinfo raises for a name that is not shaped
+    # like a key at all - an absolute path, a `..`, a stray Windows path.
     known = []
     for z in zone_names:
         try:
             known.append((z, ZoneInfo(z)))
-        except ZoneInfoNotFoundError:
+        except (ZoneInfoNotFoundError, ValueError):
             say({"op": "error", "message": f'no timezone called "{z}"; skipping it'})
 
     def watch_stdin():
+        # `hello` needs no answer of its own: Look sends it once, on start,
+        # and `ready` has already gone out by then. Only `bye`, or stdin
+        # closing, means anything here.
         try:
             for raw in sys.stdin:
                 try:
                     op = json.loads(raw).get("op")
-                except ValueError:
+                except (ValueError, AttributeError):
                     continue
                 if op == "bye":
                     os._exit(0)
@@ -581,12 +616,14 @@ if mode == "clock":
     say({"op": "ready", "capabilities": ["rows"]})
 
     pushed = ""
-    local_tz = local_zone()[0]
     while True:
         now_key = datetime.now().strftime("%Y%m%d%H%M")
         if now_key != pushed:
             pushed = now_key
-            here = datetime.now(tz=local_tz)
+            # Asked for on every push rather than once: where there is no
+            # zone name to be had, local_zone() answers with a fixed offset,
+            # and one taken at startup is an hour wrong after a DST change.
+            here = datetime.now(tz=local_zone()[0])
             rows = []
             for name, tz in known:
                 moment = datetime.now(tz=tz)
@@ -597,6 +634,8 @@ if mode == "clock":
                     "title": f"{city}  ·  {moment.strftime('%H:%M')} {abbr}",
                     "subtitle": f"{gap(here, moment, 'you')} · {moment.strftime('%a %d %b')} · {name}",
                 })
+            # Never an empty frame: that clears the block, where no push
+            # leaves the last good rows up.
             if rows:
                 say({"op": "rows", "block": "timezone-clock", "rows": rows})
         time.sleep(poll_s)
